@@ -1,0 +1,23 @@
+# Bí mật / cấu hình theo máy (dùng .env.example làm mẫu)
+.env
+
+# Ảnh quét, ảnh cắt rác lỗi sinh ra khi chạy trạm
+data/
+
+# Model AI tự train (file lớn)
+models/*.pt
+models/*.onnx
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Khác
+*.log
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

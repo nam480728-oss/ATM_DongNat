@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản trị – ATM Đồng Nát</title>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin/admin.css') }}">
+  <script src="{{ url_for('static', filename='vendor/socket.io.min.js') }}"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo sm">♻</span> ATM Đồng Nát <span class="tag">Quản trị</span></div>
+    <nav>
+      <a href="/" target="_blank" rel="noopener">Mô phỏng 3D ↗</a>
+      <form method="post" action="{{ url_for('admin.logout') }}"><button class="btn ghost sm">Đăng xuất</button></form>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section class="cards" id="cards" aria-label="Tổng quan"></section>
+
+    <section class="grid2">
+      <div class="panel">
+        <div class="panel-head"><h2>Kho chứa</h2><span id="live" class="live">● Trực tiếp</span></div>
+        <div id="storage"></div>
+        <button id="empty" class="btn primary">Làm trống kho</button>
+        <p class="muted small" id="emptied"></p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Cấu hình giá &amp; sức chứa</h2></div>
+        <form id="settings" class="settings">
+          <label>Giá 1 chai nhựa (đ)<input name="price_bottle" type="number" min="0" max="100000" step="50" required></label>
+          <label>Giá 1 lon nhôm (đ)<input name="price_can" type="number" min="0" max="100000" step="50" required></label>
+          <label>Sức chứa kho (vật)<input name="storage_capacity" type="number" min="10" max="100000" required></label>
+          <button class="btn primary">Lưu</button>
+          <span class="muted small" id="settings-msg"></span>
+        </form>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Người dùng</h2><span class="muted small" id="user-count"></span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tên</th><th>STK</th><th class="num">Đã nhận</th><th class="num">Từ thiện</th><th class="num">Lượt</th><th>Tạo lúc</th><th>Dùng gần nhất</th><th></th></tr></thead>
+          <tbody id="users"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Quỹ từ thiện</h2><span id="charity-total"></span></div>
+      <div class="table-wrap short">
+        <table>
+          <thead><tr><th>Thời gian</th><th>Người góp</th><th class="num">Chai</th><th class="num">Lon</th><th class="num">Số tiền</th></tr></thead>
+          <tbody id="charity"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Giao dịch</h2>
+        <form id="filter" class="filter">
+          <select name="user_id" aria-label="Lọc theo người dùng"><option value="">Mọi người dùng</option></select>
+          <select name="status" aria-label="Lọc theo trạng thái">
+            <option value="">Mọi trạng thái</option>
+            <option value="accepted">Đã nhận</option><option value="rejected">Trả rác</option>
+            <option value="scan_failed">Quét lỗi</option><option value="empty">Khay trống</option>
+          </select>
+          <select name="source" aria-label="Lọc theo nguồn">
+            <option value="">Khay + lỗ bỏ</option><option value="tray">Khay nạp</option><option value="slot">Lỗ bỏ chai</option>
+          </select>
+          <select name="payout" aria-label="Lọc theo hình thức nhận tiền">
+            <option value="">Mọi hình thức</option><option value="transfer">Chuyển khoản</option>
+            <option value="charity">Từ thiện</option><option value="none">Chưa chọn / không có tiền</option>
+          </select>
+          <input type="date" name="date_from" aria-label="Từ ngày">
+          <input type="date" name="date_to" aria-label="Đến ngày">
+          <button class="btn ghost sm">Lọc</button>
+        </form>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Thời gian</th><th>Người dùng</th><th>Nguồn</th><th>Trạng thái</th><th class="num">Chai</th><th class="num">Lon</th><th class="num">Tiền</th><th>Nhận tiền</th><th>Ảnh quét</th><th>Rác lỗi</th></tr></thead>
+          <tbody id="txs"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="viewer"><img alt="Ảnh quét"><form method="dialog"><button class="btn ghost sm">Đóng</button></form></dialog>
+  <script type="module" src="{{ url_for('static', filename='admin/admin.js') }}"></script>
+</body>
+</html>

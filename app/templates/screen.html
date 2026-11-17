@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1280, height=800, user-scalable=no">
+  <title>Màn hình trạm – ATM Đồng Nát</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='screen/screen.css') }}">
+  <script src="{{ url_for('static', filename='vendor/socket.io.min.js') }}"></script>
+</head>
+<body>
+  <div id="app" class="screen">
+    <header class="bar">
+      <div class="brand"><span class="logo">♻</span> ATM Đồng Nát</div>
+      <div id="bar-user" class="bar-user"></div>
+      <div id="clock" class="clock"></div>
+    </header>
+    <main id="view" class="view"></main>
+    <div id="notice" class="notice" role="status" aria-live="polite"></div>
+    <div id="slotcard" class="slotcard" role="status" aria-live="polite"></div>
+    <div id="countdown" class="countdown hidden">
+      <div class="countdown-card">
+        <div class="countdown-num" id="countdown-num">15</div>
+        <p>Không có thao tác. Tự đăng xuất sau vài giây nữa.</p>
+        <button class="btn btn-primary btn-lg" data-act="stay">Tôi vẫn đang dùng</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="{{ url_for('static', filename='screen/screen.js') }}"></script>
+</body>
+</html>

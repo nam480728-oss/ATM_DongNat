@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ATM Đồng Nát – Mô phỏng 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/sim.css') }}">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "{{ url_for('static', filename='vendor/three/three.module.js') }}",
+      "three/addons/": "/static/vendor/three/addons/"
+    }
+  }
+  </script>
+  <script src="{{ url_for('static', filename='vendor/gsap.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='vendor/socket.io.min.js') }}"></script>
+</head>
+<body>
+  <div id="scene"></div>
+  <div id="css3d"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">♻</span>
+      <div>
+        <h1>ATM Đồng Nát</h1>
+        <p>Mô phỏng trạm đổi chai nhựa &amp; lon nhôm</p>
+      </div>
+    </div>
+    <div class="hint">Kéo chuột để xoay · Cuộn để zoom · Chuột phải để dịch</div>
+  </header>
+
+  <aside id="hand" class="hand" aria-label="Rác trong tay bạn"></aside>
+
+  <nav id="views" class="views" aria-label="Góc nhìn"></nav>
+
+  <div id="loading" class="loading">Đang dựng mô hình 3D…</div>
+
+  <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
