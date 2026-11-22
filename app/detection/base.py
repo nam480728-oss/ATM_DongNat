@@ -16,6 +16,7 @@ class Detection:
     confidence: float
     bbox: tuple[int, int, int, int]  # (x1, y1, x2, y2) pixel trên ảnh chụp
     overlapped: bool = False        # vật đang đè/dính vật khác -> cần rung lại
+    source: str = "model"           # 'model' | 'background' (vùng có vật do so nền khay tìm ra, model không khoanh)
 
     @property
     def is_valid(self) -> bool:
@@ -28,6 +29,7 @@ class Detection:
             "confidence": round(self.confidence, 4),
             "bbox": list(self.bbox),
             "overlapped": self.overlapped,
+            "source": self.source,
         }
 
 
@@ -43,6 +45,9 @@ class Frame:
 
 
 class Detector(ABC):
+    # True: detector nhìn ảnh thật (không dùng đáp án 3D) -> bật so nền khay để bắt vật bị sót
+    uses_image = False
+
     def __init__(self, class_map: dict[str, str], conf_threshold: float = 0.5):
         self.class_map = class_map
         self.conf_threshold = conf_threshold

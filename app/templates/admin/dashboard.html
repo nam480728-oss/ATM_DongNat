@@ -30,8 +30,8 @@
       <div class="panel">
         <div class="panel-head"><h2>Cấu hình giá &amp; sức chứa</h2></div>
         <form id="settings" class="settings">
-          <label>Giá 1 chai nhựa (đ)<input name="price_bottle" type="number" min="0" max="100000" step="50" required></label>
-          <label>Giá 1 lon nhôm (đ)<input name="price_can" type="number" min="0" max="100000" step="50" required></label>
+          <label>Giá 1 món nhựa (đ)<input name="price_bottle" type="number" min="0" max="100000" step="50" required></label>
+          <label>Giá 1 món kim loại (đ)<input name="price_can" type="number" min="0" max="100000" step="50" required></label>
           <label>Sức chứa kho (vật)<input name="storage_capacity" type="number" min="10" max="100000" required></label>
           <button class="btn primary">Lưu</button>
           <span class="muted small" id="settings-msg"></span>
@@ -53,7 +53,7 @@
       <div class="panel-head"><h2>Quỹ từ thiện</h2><span id="charity-total"></span></div>
       <div class="table-wrap short">
         <table>
-          <thead><tr><th>Thời gian</th><th>Người góp</th><th class="num">Chai</th><th class="num">Lon</th><th class="num">Số tiền</th></tr></thead>
+          <thead><tr><th>Thời gian</th><th>Người góp</th><th class="num">Nhựa</th><th class="num">Kim loại</th><th class="num">Số tiền</th></tr></thead>
           <tbody id="charity"></tbody>
         </table>
       </div>
@@ -83,7 +83,7 @@
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>Thời gian</th><th>Người dùng</th><th>Nguồn</th><th>Trạng thái</th><th class="num">Chai</th><th class="num">Lon</th><th class="num">Tiền</th><th>Nhận tiền</th><th>Ảnh quét</th><th>Rác lỗi</th></tr></thead>
+          <thead><tr><th>#</th><th>Thời gian</th><th>Người dùng</th><th>Nguồn</th><th>Trạng thái</th><th class="num">Nhựa</th><th class="num">Kim loại</th><th class="num">Tiền</th><th>Nhận tiền</th><th>Ảnh quét</th><th>Rác lỗi</th></tr></thead>
           <tbody id="txs"></tbody>
         </table>
       </div>

@@ -149,6 +149,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #dbeaf5; fon
 .dev label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
 .dev .mini.ghost { background: rgba(255,255,255,.1); color: #e2e8f0; }
 .dev .link { text-align: center; text-decoration: none; }
+.dev-det { border: 1px solid rgba(255,255,255,.18); border-radius: 8px; padding: 6px 10px 8px; margin: 0; display: grid; gap: 4px; }
+.dev-det legend { font-size: 12px; color: #cbd5e1; padding: 0 4px; }
+.dev-det input:disabled + * , .dev-det label:has(input:disabled) { opacity: .6; cursor: wait; }
 .snapview canvas { width: 100%; border-radius: 8px; display: block; }
 .snapview.hidden { display: none; }
 
@@ -156,3 +159,47 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #dbeaf5; fon
 .target { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: rgba(15, 23, 42, .06); border-radius: 10px; margin: 0 0 8px; }
 .tg { font: 600 12.5px var(--font); border: 0; background: transparent; color: var(--muted); padding: 7px 6px; border-radius: 7px; cursor: pointer; }
 .tg.on { background: #fff; color: var(--green-dark); box-shadow: 0 1px 4px rgba(15, 23, 42, .12); }
+
+/* ---- Màn xác nhận ảnh nhận diện (bấm OK để máy đổ / trả rác) ---- */
+.confirm-wrap {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px;
+  background: rgba(15, 23, 42, .55); backdrop-filter: blur(3px); opacity: 0; transition: opacity .25s;
+}
+.confirm-wrap.show { opacity: 1; }
+/* Ẩn hẳn khi không có popup: display:grid ở trên đè thuộc tính hidden -> lớp phủ trong suốt chặn mọi cú bấm */
+.confirm-wrap[hidden] { display: none; }
+.confirm-wrap:not(.show) { pointer-events: none; }
+.confirm-box {
+  width: min(760px, 100%); max-height: calc(100vh - 32px); overflow: auto;
+  background: #fff; border-radius: 18px; box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+  border-top: 8px solid var(--green); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px;
+  transform: translateY(12px) scale(.98); transition: transform .25s;
+}
+.confirm-wrap.show .confirm-box { transform: none; }
+.confirm-box.bad { border-top-color: #dc2626; }
+.confirm-box.empty { border-top-color: #64748b; }
+.confirm-box header small { color: var(--muted); font-size: 12.5px; }
+.confirm-box h2 { margin: 2px 0 0; font-size: 22px; font-weight: 800; }
+.confirm-box.ok h2 { color: var(--green-dark); }
+.confirm-box.bad h2 { color: #b91c1c; }
+.cf-img { background: #0f172a; border-radius: 12px; overflow: hidden; line-height: 0; }
+.cf-img canvas { width: 100%; height: auto; display: block; }
+.cf-sum { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cf-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.cf-chip {
+  font-size: 14px; padding: 6px 12px; border-radius: 999px; background: #f1f5f9;
+  border-left: 6px solid var(--c, #94a3b8);
+}
+.cf-amount { font-size: 26px; font-weight: 800; color: var(--green-dark); }
+.cf-msg { margin: 0; color: var(--muted); font-size: 15px; }
+.cf-ok {
+  align-self: center; min-width: 220px; font: 800 20px var(--font); letter-spacing: .5px; color: #fff;
+  background: var(--green); border: 0; border-radius: 12px; padding: 14px 28px; cursor: pointer;
+  box-shadow: 0 6px 18px rgba(22, 163, 74, .35);
+}
+.confirm-box.bad .cf-ok { background: #dc2626; box-shadow: 0 6px 18px rgba(220, 38, 38, .35); }
+.confirm-box.empty .cf-ok { background: #475569; box-shadow: none; }
+.cf-ok:hover { filter: brightness(1.07); }
+.cf-ok:focus-visible { outline: 3px solid #0f172a; outline-offset: 3px; }
+.cf-ok:disabled { opacity: .7; cursor: wait; }
+@media (max-width: 560px) { .confirm-box h2 { font-size: 18px; } .cf-ok { width: 100%; } }

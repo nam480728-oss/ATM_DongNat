@@ -96,7 +96,7 @@ export function signTexture() {
   g.font = `800 190px ${FONT}`; g.textBaseline = 'middle';
   g.fillText('ATM ĐỒNG NÁT', 420, 175);
   g.font = `500 64px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.9)';
-  g.fillText('Đổi chai nhựa & lon nhôm lấy tiền', 430, 320);
+  g.fillText('Đổi nhựa & kim loại lấy tiền', 430, 320);
   return toTexture(c);
 }
 
@@ -111,7 +111,7 @@ export function infoTexture(prices = { bottle: 200, can: 300 }) {
   const fmt = (n) => n.toLocaleString('vi-VN') + 'đ';
   drawBottle(g, 270, 270, 220, '#38bdf8');
   drawCan(g, 754, 270, 220, '#94a3b8');
-  for (const [x, name, price] of [[270, 'Chai nhựa', prices.bottle], [754, 'Lon nhôm', prices.can]]) {
+  for (const [x, name, price] of [[270, 'Nhựa', prices.bottle], [754, 'Kim loại', prices.can]]) {
     g.fillStyle = '#0f172a'; g.font = `700 46px ${FONT}`;
     g.fillText(name, x, 430);
     g.fillStyle = '#16a34a'; g.font = `800 70px ${FONT}`;
@@ -122,7 +122,7 @@ export function infoTexture(prices = { bottle: 200, can: 300 }) {
   g.fillStyle = '#b91c1c'; g.font = `700 40px ${FONT}`;
   g.fillText('✕ KHÔNG NHẬN', 512, 610);
   g.fillStyle = '#334155'; g.font = `500 32px ${FONT}`;
-  g.fillText('Hộp giấy, túi nilon, cốc nhựa, thủy tinh, hộp xốp…', 512, 662);
+  g.fillText('Hộp giấy, túi nilon, thủy tinh, hộp xốp…', 512, 662);
   g.fillStyle = '#64748b'; g.font = `400 28px ${FONT}`;
   g.fillText('Có vật lạ trong khay → trả lại toàn bộ rác', 512, 718);
   return toTexture(c);
@@ -135,7 +135,7 @@ export function slotLabelTexture() {
   g.fillStyle = '#16a34a'; roundRect(g, 0, 0, 640, 320, 36); g.fill();
   g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.font = `800 74px ${FONT}`; g.fillText('BỎ TỪNG', 320, 78);
-  g.fillText('CHAI / LON', 320, 160);
+  g.fillText('MÓN', 320, 160);
   g.font = `500 40px ${FONT}`; g.fillStyle = '#dcfce7';
   g.fillText('◀ nằm ngang, không cần', 320, 236);
   g.fillText('mở cửa', 320, 284);

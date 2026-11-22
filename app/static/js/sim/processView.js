@@ -12,7 +12,7 @@ export function setupProcessView(ctx, bridge) {
   let slotCut = false;
   bridge.onState((s) => {
     // Vật bỏ qua lỗ: chỉ bật cắt lớp để nhìn vào trong, không kéo camera đi
-    const slot = s.state === 'PROCESSING_SLOT';
+    const slot = s.state === 'PROCESSING_SLOT' || s.confirm?.kind === 'slot';
     if (auto && slot && !slotCut && !ctx.cutaway.on) { slotCut = true; ctx.cutaway.set(true); }
     if (slotCut && !slot) {
       slotCut = false;

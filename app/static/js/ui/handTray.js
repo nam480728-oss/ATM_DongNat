@@ -2,8 +2,9 @@
 import { ITEM_TYPES } from '../items/itemFactory.js';
 
 const ICON = {
-  bottle_500: '🧴', bottle_1500: '🧴', bottle_flat: '🧴', can_tall: '🥫', can_short: '🥫',
+  bottle_500: '🧴', bottle_1500: '🧴', bottle_flat: '🧴', can_tall: '🥫', can_short: '🥫', can_dented: '🥫',
   milk_carton: '🥛', plastic_bag: '🛍️', cup_straw: '🥤', glass_bottle: '🍾', foam_box: '📦', paper_ball: '📄',
+  snack_bag: '🍿', paper_cup: '☕',
 };
 
 export function mountHandTray(el, ctx) {
@@ -24,7 +25,7 @@ export function mountHandTray(el, ctx) {
         <button class="tg" data-target="slot" role="radio">Lỗ bỏ chai ⌀11</button>
       </div>
       <p class="hand-tip" id="hand-tip"></p>
-      <h3>Chai nhựa / lon nhôm</h3>
+      <h3>Nhựa / kim loại</h3>
       <div class="item-grid">${valid.map(btn).join('')}</div>
       <h3>Rác khác (không hợp lệ)</h3>
       <div class="item-grid">${other.map(btn).join('')}</div>

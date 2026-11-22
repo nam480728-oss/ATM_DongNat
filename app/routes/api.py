@@ -35,6 +35,7 @@ def scan():
     """Chạy detector trên 1 ảnh (không đi qua quy trình máy). Dùng để thử model.
 
     multipart: file=<ảnh>   hoặc   JSON: {"image": "<data url>", "hints": [...]}
+    Tùy chọn (chỉ model YOLO): ?conf=0.3 hạ ngưỡng cả chai/lon lẫn rác cho lần thử này.
     """
     ctrl = current_app.extensions["station"]
     if ctrl.detector is None:
@@ -49,5 +50,10 @@ def scan():
             hints = data.get("hints", [])
     except (KeyError, UnidentifiedImageError, ValueError):
         return jsonify({"error": "Ảnh không hợp lệ"}), 400
-    dets = ctrl.detector.detect(Frame(image, hints))
+    conf = request.args.get("conf", type=float)
+    if conf is not None and getattr(ctrl.detector, "uses_image", False):
+        dets = ctrl.detector.detect(Frame(image, hints), conf_bottle_can=conf, conf_other=conf,
+                                    imgsz=request.args.get("imgsz", type=int))
+    else:
+        dets = ctrl.detector.detect(Frame(image, hints))
     return jsonify({"width": image.width, "height": image.height, "detections": [d.to_dict() for d in dets]})

@@ -5,10 +5,11 @@ Client -> server:
   sensor          {name, value}                  cảm biến cửa / khay / ngăn trả rác
   pay_button      {}                             nút TÍNH TIỀN
   slot_item       {}                             cảm biến cuối máng lỗ bỏ chai: có vật rơi xuống
-  ui              {action, ...}                  select_user | logout | continue | activity | payout{method}
+  ui              {action, ...}                  select_user | logout | continue | activity | payout{method} | confirm
   sim:ack         {id, data?}                    scene 3D báo đã chạy xong lệnh actuator
 Server -> client:
-  state, screen:message, result, session:countdown, actuator, payout, slot:result, scan:frame
+  state, screen:message, result, session:countdown, actuator, payout, slot:result, scan:frame,
+  confirm:request (ảnh nhận diện + khung, chờ ui{action:'confirm'} rồi máy mới nghiêng mặt phẳng)
 """
 from flask import current_app
 from flask_socketio import emit, join_room
@@ -63,6 +64,8 @@ def register_socket_handlers(socketio):
             return {"ok": c.continue_session()}
         elif action == "payout":
             return {"ok": c.payout(str(data.get("method")))}
+        elif action == "confirm":
+            return {"ok": c.confirm()}
         elif action == "activity":
             c.touch()
         else:

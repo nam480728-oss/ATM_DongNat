@@ -21,6 +21,7 @@ import { setupSlot } from './items/slotFeeder.js';
 import { setupLaser } from './items/laserScan.js';
 import { setupRear } from './station/rearMechanics.js';
 import { setupSmoothZoom } from './ui/smoothZoom.js';
+import { mountConfirmDialog } from './ui/confirmDialog.js';
 
 export const ctx = { THREE };
 window.ATM = ctx; // tiện debug trên console
@@ -109,6 +110,7 @@ async function init() {
   setupProcessView(ctx, bridge);
   mountDevPanel(ctx);
   ctx.smoothZoom = setupSmoothZoom(ctx);
+  mountConfirmDialog(ctx);
 
   // Admin đổi giá -> vẽ lại tấm hướng dẫn trên thân máy
   let lastPrices = JSON.stringify(state?.prices);

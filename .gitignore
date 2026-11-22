@@ -4,10 +4,6 @@
 # Ảnh quét, ảnh cắt rác lỗi sinh ra khi chạy trạm
 data/
 
-# Model AI tự train (file lớn)
-models/*.pt
-models/*.onnx
-
 # Python
 __pycache__/
 *.py[cod]
@@ -21,3 +17,13 @@ venv/
 .idea/
 Thumbs.db
 .DS_Store
+
+# Dữ liệu train (rất lớn, ~12 GB) – tải lại bằng models/scripts/Down_data/, xử lý lại bằng Xu_Ly_Du_Lieu/
+models/data/
+models/runs/
+models/data_da_xu_ly/
+
+# Trọng số công cụ tải sẵn > 100 MB (GitHub không nhận) – tự tải lại khi chạy script cần dùng
+models/tools/clip/
+models/tools/yolov8x-worldv2.pt
+!models/model/**/tien_do.log

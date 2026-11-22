@@ -25,8 +25,17 @@ class Config:
 
     # ---- Nhận diện ----
     DETECTOR = os.getenv("DETECTOR", "mock")  # mock | yolo
-    MODEL_PATH = os.getenv("MODEL_PATH", "models/best.pt")
-    CONF_THRESHOLD = float(os.getenv("CONF_THRESHOLD", "0.5"))
+    MODEL_PATH = os.getenv("MODEL_PATH", "models/model/best.pt")   # tương đối tính từ thư mục dự án
+    CONF_THRESHOLD = float(os.getenv("CONF_THRESHOLD", "0.5"))     # chỉ dùng cho detector giả lập (mock)
+    # Ngưỡng model YOLO (MODEL_CARD.md, chọn trên val): chai/lon và rác (other)
+    CONF_BOTTLE_CAN = float(os.getenv("CONF_BOTTLE_CAN", "0.85"))
+    CONF_OTHER = float(os.getenv("CONF_OTHER", "0.80"))
+    # Cỡ ảnh đưa vào model khi quét khay: 1280 vì cả khay 10–15 vật nằm trong 1 khung -> vật nhỏ, chạy 640 dễ sót
+    YOLO_IMGSZ = int(os.getenv("YOLO_IMGSZ", "1280"))
+    # So nền khay (bắt vật model không khoanh được) – chỉ chạy với detector nhìn ảnh thật (yolo)
+    BG_CHECK = os.getenv("BG_CHECK", "1") == "1"
+    # Hiện ảnh nhận diện + chờ người dùng bấm OK rồi mới nghiêng khay (đổ vào thùng / trả lại)
+    REQUIRE_CONFIRM = os.getenv("REQUIRE_CONFIRM", "1") == "1"
     # Ánh xạ tên lớp (model trả về) -> nhóm 'bottle' | 'can'. Lớp không có ở đây = 'other'.
     # Khi cắm model thật, sửa danh sách này theo tên lớp của model.
     CLASS_MAP = {
@@ -38,16 +47,27 @@ class Config:
         "can": "can",
         "can_tall": "can",
         "can_short": "can",
+        "can_dented": "can",
         "aluminum_can": "can",
+        "plastic": "bottle",  # model 3 nhãn: plastic / metal / other
+        "metal": "can",
+        "cup_straw": "bottle",  # ly nhựa có ống hút = nhựa
     }
     CROP_MARGIN = 0.10  # chừa lề 10% khi cắt ảnh vật không hợp lệ
     # Tên tiếng Việt hiển thị trên màn hình cho từng lớp
     LABEL_VI = {
+        "plastic": "Nhựa",
+        "metal": "Kim loại",
+        "other": "Rác khác",
+        "unknown": "Vật lạ",
         "bottle_500": "Chai nhựa 500ml",
         "bottle_1500": "Chai nhựa 1,5L",
-        "bottle_flat": "Chai nhựa dẹt",
+        "bottle_flat": "Chai nhựa bẹp",
         "can_tall": "Lon nhôm cao",
         "can_short": "Lon nhôm lùn",
+        "can_dented": "Lon nhôm móp",
+        "snack_bag": "Vỏ bánh snack",
+        "paper_cup": "Ly giấy cà phê",
         "milk_carton": "Hộp sữa giấy",
         "plastic_bag": "Túi nilon",
         "cup_straw": "Cốc nhựa có ống hút",
@@ -88,3 +108,5 @@ class TestConfig(Config):
     CHECK_TABLES_ON_START = False
     ACTUATOR_TIMEOUT_SEC = 2
     VIBRATE_SECONDS = 0
+    BG_CHECK = False
+    REQUIRE_CONFIRM = False

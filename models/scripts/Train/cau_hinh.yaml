@@ -1,0 +1,53 @@
+# Cấu hình train YOLO11s — ATM Đồng Nát (plan_train.md mục 3; chốt 18/11, sửa 19/11)
+# Đường dẫn tương đối tính từ thư mục models/. Sửa tham số ở đây, không cần sửa code.
+
+model: tools/yolo11s.pt            # khởi tạo từ trọng số COCO
+data: data_da_xu_ly/data.yaml      # bản làm sạch 19/11 (số ảnh: data_da_xu_ly/BAO_CAO.md)
+workers_val: 2                     # tiến trình đọc ảnh val (Ultralytics mặc định 2×workers -> tốn RAM)
+
+train:
+  epochs: 80                       # 19/11: 150 -> 100 -> 80 (anh/chị chốt)
+  patience: 50                     # 19/11: 30 -> 50 (lần 1 dừng ở epoch 113, chưa tới giai đoạn cuối)
+  imgsz: 640
+  batch: 16                        # thiếu VRAM thì giảm còn 8
+  device: 0
+  optimizer: auto
+  cos_lr: true
+  warmup_epochs: 3
+  amp: true
+  workers: 1                       # 19/11: 2 -> 1, lần y11s_1119_02 tràn RAM ở epoch 7 (mỗi tiến trình đọc ảnh ~1 GB trên Windows)
+  cache: false                     # không nạp ảnh vào RAM
+  seed: 42
+  deterministic: true
+  plots: true
+  # --- tăng cường dữ liệu (mô phỏng webcam cầm tay) ---
+  mosaic: 1.0
+  close_mosaic: 10       # 19/11: 15 -> 30 -> 10. Trạm nhận 10–15 vật/mẻ, 77% ảnh chỉ có 1 vật: mosaic là cách duy nhất tạo cảnh nhiều vật
+  mixup: 0.1
+  degrees: 5             # 19/11: 20 -> 5, xoay mạnh làm box thẳng trục phình to
+  flipud: 0.1
+  fliplr: 0.5
+  scale: 0.5
+  translate: 0.1
+  hsv_h: 0.015
+  hsv_s: 0.6
+  hsv_v: 0.4
+  # copy_paste: không dùng (cần nhãn mask, dữ liệu chỉ có box)
+
+danh_gia:
+  iou: 0.5                         # IoU tối thiểu để tính là đúng
+  conf_quet: [0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90]
+  so_anh_loi: 100
+  # 19/11: chấm theo trạm (mỗi mẻ 10–15 vật; có 1 vật other là trả cả mẻ)
+  me_so_vat: 12
+  conf_other_quet: [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80]
+  muc_tieu_tram:                   # ĐỀ XUẤT, chờ anh/chị chốt
+    bat_rac: 0.95                  # bắt được ≥ 95% vật rác (other)
+    me_sach_nhan: 0.90             # mẻ sạch 12 vật được nhận ≥ 90%
+    me_1_rac_tra: 0.95             # mẻ lẫn 1 rác bị trả ≥ 95%
+  muc_tieu:                        # tiêu chí đạt (plan_model.md mục 4)
+    map50: 0.85
+    recall_plastic_metal: 0.93
+    precision_plastic_metal: 0.95
+    tu_choi_vat_la: 0.90
+    fps: 20

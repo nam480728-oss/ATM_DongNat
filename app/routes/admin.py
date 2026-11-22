@@ -213,6 +213,18 @@ def update_settings():
 
 
 # ------------------------------------------------------------------ công cụ mô phỏng (panel Dev)
+@bp.post("/api/dev/detector")
+def dev_set_detector():
+    """Chỉ dùng cho bản mô phỏng: đổi bộ nhận diện {"kind": "yolo" | "mock"} (model thật / giả lập theo đáp án 3D)."""
+    if not current_app.config.get("SIM_DEV_TOOLS"):
+        return jsonify({"error": "Đã tắt công cụ dev"}), 403
+    kind = str((request.get_json(silent=True) or {}).get("kind", ""))
+    ok, err = current_app.extensions["station"].set_detector(kind)
+    if not ok:
+        return jsonify({"error": err}), 409
+    return jsonify({"ok": True, "kind": kind})
+
+
 @bp.post("/api/dev/fill-storage")
 def dev_fill_storage():
     """Chỉ dùng cho bản mô phỏng: ép kho đầy để thử kịch bản 'trạm đầy'."""

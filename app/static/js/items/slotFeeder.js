@@ -123,10 +123,10 @@ export function setupSlot(ctx, bridge, interior) {
   // Bấm vào lỗ trên trạm: đút vật đầu tiên đang cầm
   p.slotFront.userData.action = 'slot';
   p.slotFront.userData.hint = () => (T.hand.length
-    ? `Bỏ vào lỗ: ${ITEM_TYPES[T.hand[0].userData.type].name}` : 'Lỗ bỏ từng chai/lon (chọn rác ở bảng bên trái)');
+    ? `Bỏ vào lỗ: ${ITEM_TYPES[T.hand[0].userData.type].name}` : 'Lỗ bỏ từng món (chọn rác ở bảng bên trái)');
   p.slotFront.userData.onClick = () => {
     if (T.hand.length) T.insertSlot(T.hand[0]);
-    else { T.setTarget('slot'); toast('Chọn chai/lon ở bảng bên trái để bỏ vào lỗ', 'info'); }
+    else { T.setTarget('slot'); toast('Chọn món nhựa/kim loại ở bảng bên trái để bỏ vào lỗ', 'info'); }
   };
   (ctx.extraPickables ||= []).push(p.slotFront);
   return st;

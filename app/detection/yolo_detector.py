@@ -1,13 +1,12 @@
-"""Detector dùng model YOLO (ultralytics) do anh/chị tự train.
+"""Detector dùng model YOLO 3 nhãn plastic / metal / other (models/model/best.pt, xem models/model/MODEL_CARD.md).
 
-Cách cắm model:
-  1. Đặt file model (vd models/best.pt) và sửa MODEL_PATH trong .env
-  2. Đặt DETECTOR=yolo trong .env
-  3. Sửa Config.CLASS_MAP (app/config.py) cho khớp tên lớp của model -> 'bottle' / 'can'
+Cắm model: .env  DETECTOR=yolo,  MODEL_PATH=models/model/best.pt
+Luật trạm (MODEL_CARD): khung plastic/metal >= CONF_BOTTLE_CAN mới tính là chai/lon; khung other >= CONF_OTHER là rác
+-> trả cả mẻ. Khung dưới ngưỡng bị bỏ qua (vật model không chắc sẽ do lớp so nền khay bắt lại).
 """
 from pathlib import Path
 
-from .base import Detection, Detector, Frame
+from .base import GROUP_OTHER, Detection, Detector, Frame
 
 
 class DetectorUnavailable(RuntimeError):
@@ -15,30 +14,47 @@ class DetectorUnavailable(RuntimeError):
 
 
 class YoloDetector(Detector):
+    uses_image = True
     # Hai bbox có IoU vượt ngưỡng này bị coi là "đè nhau" -> cần rung lại
     OVERLAP_IOU = 0.15
 
-    def __init__(self, model_path: str, class_map, conf_threshold=0.5):
-        super().__init__(class_map, conf_threshold)
+    def __init__(self, model_path: str, class_map, conf_bottle_can=0.85, conf_other=0.80, imgsz=640):
+        super().__init__(class_map, conf_bottle_can)
         path = Path(model_path)
+        if not path.is_absolute():
+            path = Path(__file__).resolve().parents[2] / path
         if not path.is_file():
             raise DetectorUnavailable(f"Không tìm thấy file model: {path}")
         try:
+            import torch
             from ultralytics import YOLO
         except ImportError as e:  # pragma: no cover
             raise DetectorUnavailable("Chưa cài thư viện ultralytics (pip install ultralytics)") from e
         self.model = YOLO(str(path))
+        self.device = 0 if torch.cuda.is_available() else "cpu"
+        self.conf_bottle_can = conf_bottle_can
+        self.conf_other = conf_other
+        self.imgsz = imgsz
+        self.name = f"model thật YOLO ({path.name})"
+        from PIL import Image
+        self.model.predict(Image.new("RGB", (640, 480)), imgsz=imgsz, device=self.device, verbose=False)  # nạp sẵn GPU
 
-    def detect(self, frame: Frame) -> list[Detection]:
-        # conf thấp để vật "không chắc" vẫn được trả về rồi bị xếp vào 'other'
-        result = self.model.predict(frame.image, conf=0.1, verbose=False)[0]
+    def detect(self, frame: Frame, conf_bottle_can: float | None = None, conf_other: float | None = None,
+               imgsz: int | None = None) -> list[Detection]:
+        """conf_*: ghi đè ngưỡng cho 1 lần gọi (API /api/scan dùng để thử model), mặc định theo cấu hình."""
+        t_pm = self.conf_bottle_can if conf_bottle_can is None else conf_bottle_can
+        t_o = self.conf_other if conf_other is None else conf_other
+        result = self.model.predict(frame.image, imgsz=imgsz or self.imgsz, conf=min(t_pm, t_o),
+                                    device=self.device, verbose=False)[0]
         names = result.names
         dets = []
-        for box in result.boxes:
-            x1, y1, x2, y2 = (int(v) for v in box.xyxy[0].tolist())
-            conf = float(box.conf[0])
-            label = names[int(box.cls[0])]
-            dets.append(Detection(label, self.group_of(label, conf), conf, (x1, y1, x2, y2)))
+        for xyxy, c, s in zip(result.boxes.xyxy.tolist(), result.boxes.cls.tolist(), result.boxes.conf.tolist()):
+            label = names[int(c)]
+            group = self.class_map.get(label, GROUP_OTHER)
+            if s < (t_o if group == GROUP_OTHER else t_pm):
+                continue
+            dets.append(Detection(label, group, float(s), tuple(int(round(v)) for v in xyxy)))
+        dets.sort(key=lambda d: (d.bbox[1] // 50, d.bbox[0]))   # thứ tự đọc: trên xuống, trái sang phải
         for i, a in enumerate(dets):
             for b in dets[i + 1:]:
                 if _iou(a.bbox, b.bbox) > self.OVERLAP_IOU:

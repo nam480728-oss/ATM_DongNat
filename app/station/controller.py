@@ -16,6 +16,7 @@ import time
 from datetime import datetime
 
 from app.detection import Detector, Frame
+from app.detection.background import BackgroundCheck
 from app.detection.cropper import save_crop
 from app.models import PAYOUTS, RejectedItem, Transaction, User, db
 from app.services import settings_service as settings
@@ -36,9 +37,10 @@ SCAN = "PROCESSING_SCAN"
 ACCEPTING = "ACCEPTING"
 REJECTING = "REJECTING"
 SLOT = "PROCESSING_SLOT"   # đang quét 1 vật bỏ qua lỗ
+CONFIRM = "WAITING_CONFIRM"  # đã nhận diện xong, chờ người dùng xem ảnh và bấm OK
 RESULT = "RESULT"
 
-PROCESSING_STATES = {TRANSFER, PRESCAN, VIBRATE, SCAN, ACCEPTING, REJECTING, SLOT}
+PROCESSING_STATES = {TRANSFER, PRESCAN, VIBRATE, SCAN, ACCEPTING, REJECTING, SLOT, CONFIRM}
 SESSION_STATES = {READY, RESULT}  # có người dùng, máy đang rảnh
 
 SENSOR_NAMES = {"door_closed", "feed_drawer_in", "feed_drawer_jammed", "return_drawer_in",
@@ -73,6 +75,47 @@ class StationController:
         self.last_slot: dict | None = None
         # Thùng chứa đã được rút ra (để biết khi đẩy vào là đã đổ rác)
         self._bin_removed = False
+        # So nền khay: chỉ chạy khi detector nhìn ảnh thật (model YOLO), bỏ qua với bản giả lập theo đáp án 3D
+        self.bg = BackgroundCheck() if app.config.get("BG_CHECK") else None
+        # Bộ nhận diện đã nạp (panel Dev đổi qua lại: 'yolo' model thật | 'mock' giả lập theo đáp án 3D)
+        self._detectors: dict[str, Detector] = {self._kind(detector): detector} if detector is not None else {}
+        # Màn xác nhận: ảnh nhận diện đang chờ người dùng bấm OK
+        self.confirm_data: dict | None = None
+        self._confirm_event = threading.Event()
+
+    # ------------------------------------------------------------------ đổi bộ nhận diện (panel Dev)
+    @staticmethod
+    def _kind(detector) -> str | None:
+        if detector is None:
+            return None
+        return "yolo" if getattr(detector, "uses_image", False) else "mock"
+
+    @property
+    def detector_kind(self) -> str | None:
+        return self._kind(self.detector)
+
+    def set_detector(self, kind: str) -> tuple[bool, str | None]:
+        """Chuyển giữa model thật (yolo) và giả lập theo đáp án 3D (mock). Chỉ khi máy đang rảnh."""
+        if kind not in ("yolo", "mock"):
+            return False, f"Bộ nhận diện không hợp lệ: {kind!r}"
+        with self._lock:
+            if self.state in PROCESSING_STATES:
+                return False, "Máy đang xử lý, đổi sau khi xong"
+        det = self._detectors.get(kind)
+        if det is None:
+            from app.detection import DetectorUnavailable, build_detector
+            try:
+                det = build_detector({**self.app.config, "DETECTOR": kind})   # nạp model mất vài giây
+            except DetectorUnavailable as e:
+                return False, str(e)
+            self._detectors[kind] = det
+        with self._lock:
+            if self.state in PROCESSING_STATES:
+                return False, "Máy đang xử lý, đổi sau khi xong"
+            self.detector = det
+            self.detector_error = None
+        self.broadcast()
+        return True, None
 
     # ------------------------------------------------------------------ tiện ích
     def _message(self, text: str, level: str = "info", code: str | None = None):
@@ -143,6 +186,8 @@ class StationController:
                 "last_slot": self.last_slot,
                 "countdown": self.countdown,
                 "detector_error": self.detector_error,
+                "detector_kind": self.detector_kind,
+                "confirm": self.confirm_data if self.state == CONFIRM else None,
             }
 
     def _station_full(self) -> bool:
@@ -401,8 +446,88 @@ class StationController:
     def _detect(self) -> tuple[Frame, list]:
         frame = self.hal.capture()
         dets = self.detector.detect(frame)
+        if self.bg is not None and getattr(self.detector, "uses_image", False):
+            try:
+                dets += self.bg.unknown_objects(frame.image, dets)
+            except Exception:  # so nền chỉ là lớp chặn thêm, lỗi không được làm hỏng quy trình
+                log.exception("background check")
         self._emit_scan_frame(frame, dets)
         return frame, dets
+
+    def _learn_bg(self):
+        """Chụp mặt phẳng rung đang trống để học nền (gọi khi chắc chắn mặt phẳng trống)."""
+        if self.bg is None or not getattr(self.detector, "uses_image", False):
+            return
+        try:
+            self.bg.learn([self.hal.capture_background().image])
+        except Exception:
+            log.exception("learn background")
+
+    def _tilt(self, target: str):
+        self.hal.tilt_plate(target)
+        self._learn_bg()  # mặt phẳng vừa trống -> cập nhật nền cho lần quét sau (cả lỗ bỏ chai)
+
+    # ------------------------------------------------------------------ màn xác nhận (OK)
+    def _summary(self, dets, decision: str, scan_failed: bool = False, paid: bool = True) -> dict:
+        bottles = sum(d.group == "bottle" for d in dets)
+        cans = sum(d.group == "can" for d in dets)
+        others = sum(d.group == "other" and d.source == "model" for d in dets)
+        unknown = sum(d.source == "background" for d in dets)
+        pb, pc = settings.get_prices()
+        amount = calc_amount(bottles, cans, pb, pc) if decision == "accept" and paid else 0
+        if scan_failed:
+            msg = "Rác vẫn đè lên nhau sau khi rung – sẽ trả lại toàn bộ"
+        elif decision == "accept":
+            msg = f"Nhận {bottles} chai nhựa, {cans} lon nhôm" + (f" – {format_vnd(amount)}" if paid else " (chưa chọn tên: không tính tiền)")
+        elif decision == "empty":
+            msg = "Không thấy vật nào trên khay"
+        else:
+            parts = []
+            if others:
+                parts.append(f"{others} vật rác")
+            if unknown:
+                parts.append(f"{unknown} vật lạ model không nhận ra")
+            msg = f"Có {' và '.join(parts) or 'vật không hợp lệ'} – không tính tiền, trả lại {'cả mẻ' if bottles + cans else 'vật'}"
+        return {"decision": decision, "scan_failed": scan_failed, "bottles": bottles, "cans": cans,
+                "others": others, "unknown": unknown, "amount": amount, "amount_text": format_vnd(amount),
+                "message": msg}
+
+    def _await_confirm(self, kind: str, frame: Frame, dets: list, summary: dict):
+        """Hiện ảnh nhận diện (có khung) cho người dùng, chờ bấm OK rồi mới nghiêng mặt phẳng."""
+        if not self.app.config.get("REQUIRE_CONFIRM"):
+            return
+        labels_vi = self.app.config["LABEL_VI"]
+        buf = io.BytesIO()
+        frame.image.save(buf, "JPEG", quality=88)
+        data = {
+            "kind": kind, **summary,
+            "image": "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode(),
+            "width": frame.image.width, "height": frame.image.height,
+            "boxes": [{"bbox": list(d.bbox), "label": d.label, "label_vi": labels_vi.get(d.label, d.label),
+                       "group": d.group, "valid": d.is_valid, "confidence": round(d.confidence, 3),
+                       "source": d.source} for d in dets],
+            "detector": getattr(self.detector, "name", type(self.detector).__name__),
+        }
+        with self._lock:
+            self._confirm_event.clear()
+            self.confirm_data = data
+            prev, self.state = self.state, CONFIRM
+        self.broadcast()
+        self._emit("confirm:request", data)
+        self._confirm_event.wait()
+        with self._lock:
+            self.confirm_data = None
+            self.state = prev
+        self.broadcast()
+
+    def confirm(self) -> bool:
+        """Người dùng bấm OK trên màn xác nhận."""
+        with self._lock:
+            if self.state != CONFIRM:
+                return False
+            self._confirm_event.set()
+        self.touch()
+        return True
 
     def _emit_scan_frame(self, frame: Frame, dets: list):
         """Gửi ảnh vừa chụp + khung nhận diện cho màn hình (như máy thật hiện ảnh camera)."""
@@ -425,12 +550,14 @@ class StationController:
     def _process(self):
         self.hal.lock_door(True)
         self.hal.set_led("status", "busy")
+        self._learn_bg()  # mặt phẳng rung đang trống (trước khi đổ khay)
         self.hal.dump_feed_tray()
 
         self._set_state(PRESCAN)
         frame, dets = self._detect()
         attempts = 1
 
+        scan_failed = False
         if len(dets) > 1:
             max_retries = settings.get_int("max_vibrate_retries")
             for _ in range(1 + max_retries):
@@ -442,11 +569,21 @@ class StationController:
                 if not any(d.overlapped for d in dets):
                     break
             else:
-                return self._reject(frame, dets, attempts, scan_failed=True)
+                scan_failed = True
 
-        if not dets:
+        if scan_failed:
+            decision = "reject"
+        elif not dets:
+            decision = "empty"
+        else:
+            decision = "accept" if all(d.is_valid for d in dets) else "reject"
+        self._await_confirm("tray", frame, dets, self._summary(dets, decision, scan_failed))
+
+        if scan_failed:
+            return self._reject(frame, dets, attempts, scan_failed=True)
+        if decision == "empty":
             return self._record_empty(frame, attempts)
-        if all(d.is_valid for d in dets):
+        if decision == "accept":
             return self._accept(frame, dets, attempts)
         return self._reject(frame, dets, attempts)
 
@@ -494,7 +631,7 @@ class StationController:
 
     def _accept(self, frame, dets, attempts):
         self._set_state(ACCEPTING)
-        self.hal.tilt_plate("storage")
+        self._tilt("storage")
         bottles = sum(d.group == "bottle" for d in dets)
         cans = sum(d.group == "can" for d in dets)
         pb, pc = settings.get_prices()
@@ -510,12 +647,12 @@ class StationController:
         self._finish({
             "status": "accepted", "tx_id": tx.id, "bottles": bottles, "cans": cans, "amount": amount,
             "amount_text": format_vnd(amount), "rejected": [],
-            "message": f"Đã nhận {bottles} chai nhựa, {cans} lon nhôm",
+            "message": f"Đã nhận {bottles} nhựa, {cans} kim loại",
         })
 
     def _reject(self, frame, dets, attempts, scan_failed=False):
         self._set_state(REJECTING)
-        self.hal.tilt_plate("return")
+        self._tilt("return")
         self.hal.set_led("return_drawer", "blink")
 
         tx = self._new_tx("scan_failed" if scan_failed else "rejected", attempts)
@@ -581,16 +718,18 @@ class StationController:
             return self._finish_slot({"status": "error", "rejected": [],
                                       "message": "Bộ nhận diện chưa sẵn sàng, vật đã được trả về ngăn dưới"})
         frame, dets = self._detect()
+        user_id = self.user_id
+        decision = "empty" if not dets else ("accept" if all(d.is_valid for d in dets) else "reject")
+        self._await_confirm("slot", frame, dets, self._summary(dets, decision, paid=bool(user_id)))
         if not dets:
-            self.hal.tilt_plate("return")
+            self._tilt("return")
             return self._finish_slot({"status": "empty", "rejected": [],
                                       "message": "Không nhận diện được vật, đã trả về ngăn dưới"})
 
-        user_id = self.user_id
         labels_vi = self.app.config["LABEL_VI"]
         names = ", ".join(labels_vi.get(d.label, d.label) for d in dets)
         if all(d.is_valid for d in dets):
-            self.hal.tilt_plate("storage")
+            self._tilt("storage")
             bottles = sum(d.group == "bottle" for d in dets)
             cans = sum(d.group == "can" for d in dets)
             pb, pc = settings.get_prices()
@@ -608,7 +747,7 @@ class StationController:
                                       "amount": amount, "guest": not user_id, "label_vi": names,
                                       "rejected": [], "message": msg})
 
-        self.hal.tilt_plate("return")
+        self._tilt("return")
         self.hal.set_led("return_drawer", "blink")
         tx = self._new_tx("rejected", 1, source="slot", user_id=user_id)
         self._save_scan(tx, frame)

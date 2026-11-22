@@ -38,6 +38,14 @@ export function setupCutaway(ctx) {
       ctx.cutawayListeners?.forEach((fn) => fn(on));
     },
     toggle() { this.set(!state.on); },
+    /** Chạy fn khi vỏ trạm tạm thời đục hoàn toàn (camera buồng quét chụp như máy thật, không bị chế độ cắt lớp
+     *  làm lọt sáng / đổi bóng -> ảnh nền và ảnh quét luôn giống nhau). */
+    withOpaque(fn) {
+      const v = state.value;
+      if (v >= 0.999) return fn();
+      state.value = 1; apply();
+      try { return fn(); } finally { state.value = v; apply(); }
+    },
   };
   return ctx.cutaway;
 }

@@ -152,7 +152,7 @@ export function setupTrash(ctx, bridge, interior) {
     item.traverse((o) => {
       if (o.isMesh) {
         o.geometry.dispose();
-        (Array.isArray(o.material) ? o.material : [o.material]).forEach((mm) => { mm.map?.dispose(); mm.dispose(); });
+        (Array.isArray(o.material) ? o.material : [o.material]).forEach((mm) => { if (!mm.map?.userData?.shared) mm.map?.dispose(); mm.dispose(); });
       }
     });
   }
@@ -343,11 +343,14 @@ export function setupTrash(ctx, bridge, interior) {
   T.capture = function capture() {
     const { renderer, scene } = ctx;
     plate.updateMatrixWorld(true);
-    const prev = renderer.getRenderTarget();
-    renderer.setRenderTarget(rt);
-    renderer.render(scene, scanCam);
-    renderer.readRenderTargetPixels(rt, 0, 0, SCAN_CAM.w, SCAN_CAM.h, pixels);
-    renderer.setRenderTarget(prev);
+    const render = () => {
+      const prev = renderer.getRenderTarget();
+      renderer.setRenderTarget(rt);
+      renderer.render(scene, scanCam);
+      renderer.readRenderTargetPixels(rt, 0, 0, SCAN_CAM.w, SCAN_CAM.h, pixels);
+      renderer.setRenderTarget(prev);
+    };
+    if (ctx.cutaway?.withOpaque) ctx.cutaway.withOpaque(render); else render();
     const img = snapCtx.createImageData(SCAN_CAM.w, SCAN_CAM.h);
     const row = SCAN_CAM.w * 4;
     for (let y = 0; y < SCAN_CAM.h; y++) {
@@ -362,12 +365,21 @@ export function setupTrash(ctx, bridge, interior) {
     return { image: snapCanvas.toDataURL('image/jpeg', 0.9), hints };
   };
 
-  bridge.on('capture', async () => {
+  // Độ sáng lúc chụp: vừa đủ, không làm cháy sáng vật ở gần camera (ảnh nền và ảnh quét phải cùng độ sáng)
+  const FLASH = { ring: 2.6, light: 2.2 };
+  bridge.on('capture', async ({ quick = false } = {}) => {
     // Như camera công nghiệp thật: đèn LED vòng sáng dần để lấy nét/đo sáng -> chớp flash ngắn lúc chụp
     // -> tắt dần. Đèn đỏ nhỏ trên thân camera sáng trong lúc chụp.
     const ring = interior.ring.material, light = interior.light, rec = interior.rec.material;
     const lit = { ring: 0, light: 0 };
     const apply = () => { ring.emissiveIntensity = lit.ring; light.intensity = lit.light; };
+    if (quick) {
+      // Chụp nền mặt phẳng trống (so nền khay): cùng độ sáng flash như ảnh quét, không hiệu ứng
+      lit.ring = FLASH.ring; lit.light = FLASH.light; apply();
+      const data = T.capture();
+      lit.ring = 0; lit.light = 0; apply();
+      return { image: data.image };
+    }
     rec.emissiveIntensity = 2.5;
     // Laser vạch quét qua toàn mặt phẳng (đo hình dạng / chiều cao vật) trong buồng tối
     if (ctx.laser) {
@@ -377,7 +389,7 @@ export function setupTrash(ctx, bridge, interior) {
     }
     await gsap().to(lit, { ring: 1.6, light: 2.6, duration: 0.35, ease: 'power1.out', onUpdate: apply }).then();
     await sleep(120);
-    lit.ring = 4.5; lit.light = 4.6; apply();   // flash
+    lit.ring = FLASH.ring; lit.light = FLASH.light; apply();   // flash
     const data = T.capture();
     await sleep(70);
     await gsap().to(lit, { ring: 1.6, light: 2.6, duration: 0.22, ease: 'power2.out', onUpdate: apply }).then();

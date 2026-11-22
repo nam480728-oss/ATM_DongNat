@@ -8,7 +8,8 @@ def build_detector(config) -> Detector:
     if kind == "mock":
         return MockDetector(config["CLASS_MAP"], config["CONF_THRESHOLD"])
     if kind == "yolo":
-        return YoloDetector(config["MODEL_PATH"], config["CLASS_MAP"], config["CONF_THRESHOLD"])
+        return YoloDetector(config["MODEL_PATH"], config["CLASS_MAP"], config["CONF_BOTTLE_CAN"], config["CONF_OTHER"],
+                            config.get("YOLO_IMGSZ", 640))
     raise DetectorUnavailable(f"DETECTOR không hợp lệ: {kind!r} (chỉ nhận 'mock' hoặc 'yolo')")
 
 

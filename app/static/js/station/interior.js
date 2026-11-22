@@ -11,7 +11,8 @@ export const PLATE = { y: 0.55, z: 0.04, w: 0.70, d: 0.42, tilt: THREE.MathUtils
 export const BIN = { x1: -0.355, x2: 0.355, z1: -0.35, z2: -0.11, y1: D.PLINTH + D.T, y2: 0.47 };
 // Camera quét: gắn trần buồng quét, phía sau khay, nhìn xuống mặt phẳng
 export const SCAN_LAYER = 1;
-export const SCAN_CAM = { pos: [0, 0.84, -0.13], fov: 92, w: 640, h: 480 };
+// 1280x960: khay rộng 70 cm chứa 10–15 vật -> mỗi vật chỉ chiếm phần nhỏ khung hình, cần ảnh nét để model nhận ra
+export const SCAN_CAM = { pos: [0, 0.84, -0.13], fov: 86, w: 1280, h: 960 };
 
 export function buildInterior() {
   const g = new THREE.Group();

@@ -54,6 +54,10 @@ class HardwareInterface(ABC):
     def capture(self) -> Frame:
         """Chụp ảnh mặt phẳng rung từ camera buồng quét."""
 
+    def capture_background(self) -> Frame:
+        """Chụp mặt phẳng rung đang TRỐNG để học nền (so nền khay). Mặc định = chụp thường."""
+        return self.capture()
+
     @abstractmethod
     def tilt_plate(self, target: str) -> None:
         """target = 'storage' (nghiêng sau, vào kho) | 'return' (nghiêng trước, ra ngăn trả rác)."""
@@ -120,6 +124,10 @@ class SimulatedHardware(HardwareInterface):
     def capture(self) -> Frame:
         data = self._command("capture")
         return Frame(image=decode_data_url(data["image"]), hints=data.get("hints", []))
+
+    def capture_background(self) -> Frame:
+        data = self._command("capture", quick=True)   # chụp ngay, không chạy hiệu ứng laser/flash
+        return Frame(image=decode_data_url(data["image"]))
 
     def tilt_plate(self, target: str) -> None:
         self._command("tilt_plate", target=target)

@@ -5,6 +5,8 @@ from .base import Detection, Detector, Frame
 
 
 class MockDetector(Detector):
+    name = "giả lập (đáp án 3D)"
+
     def __init__(self, class_map, conf_threshold=0.5, seed: int | None = None):
         super().__init__(class_map, conf_threshold)
         self._rng = random.Random(seed)

@@ -22,8 +22,8 @@ async function loadStats() {
   const st = s.station;
   const pct = Math.min(100, Math.round((st.storage_count / st.storage_capacity) * 100));
   $('#cards').innerHTML = [
-    ['Chai nhựa đã thu', num(s.bottles)],
-    ['Lon nhôm đã thu', num(s.cans)],
+    ['Nhựa đã thu', num(s.bottles)],
+    ['Kim loại đã thu', num(s.cans)],
     ['Đã chuyển khoản', vnd(s.paid)],
     ['Quỹ từ thiện', vnd(s.charity)],
     ['Dung lượng kho', `${pct}%`],

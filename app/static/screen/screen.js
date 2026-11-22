@@ -88,10 +88,10 @@ function renderIdle() {
     <section class="idle">
       <div class="hero">
         <div class="hero-logo">♻</div>
-        <h1>Đổi chai nhựa & lon nhôm<br>lấy tiền</h1>
+        <h1>Đổi nhựa & kim loại<br>lấy tiền</h1>
         <div class="prices">
-          <div class="price"><span class="ico bottle"></span><div><small>Chai nhựa</small><b>${vnd(S.prices.bottle)}</b></div></div>
-          <div class="price"><span class="ico can"></span><div><small>Lon nhôm</small><b>${vnd(S.prices.can)}</b></div></div>
+          <div class="price"><span class="ico bottle"></span><div><small>Nhựa</small><b>${vnd(S.prices.bottle)}</b></div></div>
+          <div class="price"><span class="ico can"></span><div><small>Kim loại</small><b>${vnd(S.prices.can)}</b></div></div>
         </div>
       </div>
       <div class="idle-side">
@@ -100,10 +100,10 @@ function renderIdle() {
         ${openWarn ? `<div class="banner warning">Vui lòng đẩy khay vào và đóng cửa</div>` : ''}
         <button class="btn btn-primary btn-xl" data-act="start" ${full || S.maintenance ? 'disabled' : ''}>Bắt đầu</button>
         <ol class="steps-mini">
-          <li>Chọn tên của bạn</li><li>Mở cửa, kéo khay, bỏ chai/lon</li><li>Đẩy khay, đóng cửa, bấm <b>TÍNH TIỀN</b></li>
+          <li>Chọn tên của bạn</li><li>Mở cửa, kéo khay, bỏ rác</li><li>Đẩy khay, đóng cửa, bấm <b>TÍNH TIỀN</b></li>
         </ol>
         <div class="slot-hint ${S.slot_open ? '' : 'off'}"><span class="slot-dot"></span>
-          <span>Bỏ nhanh từng chai/lon qua <b>lỗ tròn phía trên cửa</b>, không cần chọn tên<br><small>Chưa chọn tên: chỉ phân loại, không tính tiền</small></span></div>
+          <span>Bỏ nhanh từng món qua <b>lỗ tròn phía trên cửa</b>, không cần chọn tên<br><small>Chưa chọn tên: chỉ phân loại, không tính tiền</small></span></div>
         <div class="storage">Kho chứa: ${st.storage_count}/${st.storage_capacity}
           <div class="meter"><i style="width:${Math.min(100, (st.storage_count / st.storage_capacity) * 100)}%"></i></div></div>
       </div>
@@ -230,12 +230,12 @@ function renderSession() {
       </div>
       <ol class="checklist">
         ${check(trayOpened, 'Mở cửa và kéo khay ra')}
-        ${check(trayOpened && sen.feed_drawer_in, 'Bỏ <b>chai nhựa / lon nhôm</b> vào khay (không đổ cao quá miệng khay)')}
+        ${check(trayOpened && sen.feed_drawer_in, 'Bỏ <b>nhựa / kim loại</b> vào khay (không đổ cao quá miệng khay)')}
         ${check(trayOpened && closed, 'Đẩy khay vào và đóng cửa')}
         ${check(false, 'Bấm nút <b>TÍNH TIỀN</b> màu xanh bên dưới màn hình')}
       </ol>
       ${S.pending?.amount > 0 ? `<div class="pending"><span>Đã bỏ qua lỗ: <b>${countText(S.pending)}</b></span><b class="pending-amt">${vnd(S.pending.amount)}</b><small>Bấm TÍNH TIỀN để nhận tiền</small></div>`
-        : `<p class="slot-tip">Mẹo: có thể bỏ từng chai/lon qua <b>lỗ tròn phía trên cửa</b> mà không cần mở cửa.</p>`}
+        : `<p class="slot-tip">Mẹo: có thể bỏ từng món qua <b>lỗ tròn phía trên cửa</b> mà không cần mở cửa.</p>`}
       ${sen.feed_drawer_jammed ? '<div class="banner warning">Khay bị kẹt: rác quá nhiều, vui lòng bớt ra</div>' : ''}
       ${!sen.return_drawer_in ? '<div class="banner warning">Ngăn trả rác đang mở – vui lòng đóng lại</div>' : ''}
       ${S.station.is_full ? '<div class="banner error">Trạm đã đầy, không thể nhận thêm rác</div>' : ''}
@@ -252,11 +252,16 @@ const STEPS = [
   ['PROCESSING_PRESCAN', 'Quét sơ bộ'],
   ['PROCESSING_VIBRATE', 'Rung dàn đều rác'],
   ['PROCESSING_SCAN', 'Quét nhận diện'],
+  ['WAITING_CONFIRM', 'Xem ảnh nhận diện, bấm OK'],
   ['DECIDE', 'Phân loại & tính tiền'],
 ];
-const SLOT_STEPS = [['PROCESSING_SLOT', 'Quét nhận diện'], ['DECIDE', 'Phân loại']];
+const SLOT_STEPS = [['PROCESSING_SLOT', 'Quét nhận diện'], ['WAITING_CONFIRM', 'Xem ảnh, bấm OK'], ['DECIDE', 'Phân loại']];
+let slotRun = false;   // đang xử lý vật bỏ qua lỗ (giữ qua bước chờ OK)
 function renderProcessing() {
-  const slot = S.state === 'PROCESSING_SLOT';
+  if (S.state === 'PROCESSING_SLOT') slotRun = true;
+  else if (!['WAITING_CONFIRM', 'ACCEPTING', 'REJECTING'].includes(S.state)) slotRun = false;
+  const slot = slotRun || S.confirm?.kind === 'slot';
+  const waiting = S.state === 'WAITING_CONFIRM';
   const steps = slot ? SLOT_STEPS : STEPS;
   const cur = ['ACCEPTING', 'REJECTING'].includes(S.state) ? 'DECIDE' : S.state;
   const idx = steps.findIndex(([k]) => k === cur);
@@ -264,8 +269,8 @@ function renderProcessing() {
     <section class="processing ${lastFrame ? 'with-frame' : ''}">
       <div class="proc-main">
         <div class="spinner"></div>
-        <h2>${slot ? 'Đang kiểm tra vật bỏ qua lỗ…' : 'Đang xử lý, vui lòng chờ…'}</h2>
-        <p class="muted">${slot ? 'Vui lòng chờ trước khi bỏ vật tiếp theo' : 'Cửa đã khóa trong lúc máy hoạt động'}</p>
+        <h2>${waiting ? 'Mời xem ảnh nhận diện và bấm OK' : slot ? 'Đang kiểm tra vật bỏ qua lỗ…' : 'Đang xử lý, vui lòng chờ…'}</h2>
+        <p class="muted">${waiting ? esc(S.confirm?.message || '') : slot ? 'Vui lòng chờ trước khi bỏ vật tiếp theo' : 'Cửa đã khóa trong lúc máy hoạt động'}</p>
         <ol class="progress">
           ${steps.map(([k, t], i) => `<li class="${i < idx ? 'done' : i === idx ? 'now' : ''}">${t}</li>`).join('')}
         </ol>
@@ -290,7 +295,7 @@ function frameView(f) {
     </figure>`;
 }
 
-const countText = (p) => [p.bottles ? `${p.bottles} chai nhựa` : '', p.cans ? `${p.cans} lon nhôm` : ''].filter(Boolean).join(', ') || '0 vật';
+const countText = (p) => [p.bottles ? `${p.bottles} nhựa` : '', p.cans ? `${p.cans} kim loại` : ''].filter(Boolean).join(', ') || '0 vật';
 
 /** Hộp chọn Chuyển khoản / Từ thiện, hoặc kết quả sau khi chọn */
 function payoutBox(compact) {
