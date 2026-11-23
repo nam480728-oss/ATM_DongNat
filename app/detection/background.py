@@ -1,4 +1,4 @@
-"""So nền khay: lớp chặn thứ hai cho vật model không khoanh được (bản dùng trong trạm của models/scripts/so_nen.py).
+"""So nền khay: lớp chặn thứ hai cho vật model không khoanh được.
 
 Camera buồng quét cố định nhìn xuống mặt phẳng rung một màu. Học ảnh mặt phẳng TRỐNG, mỗi lần quét so ảnh hiện tại
 với nền để tìm mọi vùng "có vật". Vùng nào không được khung model (bất kỳ lớp nào) phủ đủ -> vật lạ -> trả cả mẻ.

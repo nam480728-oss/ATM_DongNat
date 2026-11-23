@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nhận voucher – PEACE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin/admin.css') }}">
+  <style>
+    body { min-height: 100vh; }
+    [hidden] { display: none !important; }
+    .shop { max-width: 480px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .shop .panel { display: flex; flex-direction: column; gap: 10px; }
+    .shop h1 { font-size: 20px; margin: 0; display: flex; align-items: center; gap: 10px; }
+    .shop label { font-weight: 600; font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+    .shop input { font: 600 18px var(--font); padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); }
+    #code { font-family: ui-monospace, Consolas, monospace; letter-spacing: 2px; text-transform: uppercase; }
+    .shop .btn { font-size: 16px; padding: 12px; }
+    .vcard { border-radius: 14px; padding: 16px; text-align: center; border: 2px solid var(--line); }
+    .vcard.active { border-color: var(--green); background: color-mix(in srgb, var(--green) 8%, transparent); }
+    .vcard.bad { border-color: var(--red); background: color-mix(in srgb, var(--red) 8%, transparent); }
+    .vcard .amt { font-size: 40px; font-weight: 800; }
+    .vcard .code { font-family: ui-monospace, Consolas, monospace; letter-spacing: 2px; }
+    .hist { list-style: none; padding: 0; margin: 0; font-size: 14px; }
+    .hist li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--line); }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    /* nhúng trong quầy thu ngân của mô phỏng 3D */
+    body.embed .shop { padding: 10px; gap: 10px; }
+    body.embed .shop > h1 { font-size: 16px; }
+    .bill { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+    .bill[hidden] { display: none; }
+    .bill ul { list-style: none; margin: 0; padding: 0; }
+    .bill li { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px dashed var(--line); }
+    .bill .qty { display: flex; gap: 4px; align-items: center; }
+    .bill .qty button { width: 26px; height: 26px; padding: 0; }
+    .bill .sum { display: flex; justify-content: space-between; margin-top: 6px; }
+    .bill .sum.big { font-size: 20px; font-weight: 800; }
+    .bill .warn { color: var(--amber); font-weight: 600; font-size: 13px; }
+    .catalog { display: flex; flex-wrap: wrap; gap: 6px; }
+    .catalog button { font-size: 13px; padding: 6px 8px; }
+    .receipt { border: 2px solid var(--green); border-radius: 12px; padding: 12px; }
+    .paid-ok { border-radius: 14px; padding: 18px; text-align: center; background: #16a34a; color: #fff; }
+    .paid-ok .big { font-size: 26px; font-weight: 800; }
+    .paid-ok .tick { font-size: 46px; line-height: 1; }
+    .demo-tag { font-size: 12px; font-weight: 700; color: #0369a1; background: #e0f2fe; border-radius: 999px; padding: 2px 8px; }
+  </style>
+</head>
+<body>
+  <main class="shop">
+    <h1><span class="logo sm">♻</span> PEACE · Nhận voucher</h1>
+
+    <section class="panel" id="login" hidden>
+      <p class="muted">Cửa hàng / nhà xe liên kết đăng nhập để nhận voucher của khách.</p>
+      <form id="login-form" class="panel">
+        <label>Mã cửa hàng<input name="code" autocomplete="username" required></label>
+        <label>PIN<input name="pin" type="password" inputmode="numeric" autocomplete="current-password" required></label>
+        <p class="alert" id="login-err" hidden></p>
+        <button class="btn primary">Đăng nhập</button>
+      </form>
+    </section>
+
+    <section class="panel" id="main" hidden>
+      <div class="row"><b id="mname"></b><button class="btn ghost sm" id="logout">Đăng xuất</button></div>
+      <section class="bill" id="bill" hidden aria-label="Hóa đơn">
+        <div class="row"><h2 style="margin:0">Hóa đơn</h2><button class="btn ghost sm" id="bill-clear">Xóa hóa đơn</button></div>
+        <ul id="bill-lines"></ul>
+        <div class="sum"><span>Tổng cộng</span><b id="bill-total"></b></div>
+        <div id="bill-voucher"></div>
+        <div class="sum big"><span>Khách trả tiền mặt</span><span id="bill-cash"></span></div>
+        <button class="btn primary" id="bill-pay" style="width:100%;margin-top:8px">Thanh toán</button>
+      </section>
+      <details id="catalog-box" hidden><summary>Thêm món vào hóa đơn</summary><div class="catalog" id="catalog"></div></details>
+      <div id="receipt"></div>
+      <p class="muted small">Quét mã QR trên điện thoại khách bằng camera (link tự mở trang này), hoặc gõ mã in dưới QR.
+        Đang có hóa đơn thì voucher được trừ vào hóa đơn, phần thiếu khách trả tiền mặt.</p>
+      <form id="check-form" class="panel">
+        <label>Mã voucher<input id="code" name="code" placeholder="DN-XXXX-XXXX" autocomplete="off" required></label>
+        <button class="btn ghost">Kiểm tra</button>
+      </form>
+      <div id="result" role="status" aria-live="polite"></div>
+      <h2>Đã nhận gần đây</h2>
+      <ul class="hist" id="history"></ul>
+    </section>
+  </main>
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const vnd = (n) => Number(n || 0).toLocaleString('vi-VN') + 'đ';
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const ST = { active: 'Còn hiệu lực', used: 'Đã dùng', expired: 'Hết hạn', void: 'Đã hủy' };
+    async function api(path, opts = {}) {
+      const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 401 && !path.endsWith('/login')) { show(null); throw new Error(d.error); }
+      if (!r.ok) throw new Error(d.error || r.statusText);
+      return d;
+    }
+    function show(m) {
+      $('#login').hidden = !!m; $('#main').hidden = !m;
+      if (m) { $('#mname').textContent = `${m.name} (${m.code})`; loadHistory(); loadCatalog(); }
+    }
+    // ---------------------------------------------------------------- hóa đơn (bán hàng ở quầy)
+    let catalog = [], bill = [], billVoucher = null;
+    const embedded = window.parent !== window;
+    const tell = (msg) => { if (embedded) window.parent.postMessage(msg, location.origin); };
+    async function loadCatalog() {
+      try { catalog = await api('/api/shop/products'); } catch { catalog = []; }
+      $('#catalog-box').hidden = !catalog.length;
+      $('#catalog').innerHTML = catalog.map((p) => `<button class="btn ghost" data-add="${p.id}">${esc(p.icon || '')} ${esc(p.name)} · ${vnd(p.price)}</button>`).join('');
+    }
+    function setBill(items) {
+      bill = [];
+      for (const it of items || []) {
+        const p = catalog.find((x) => x.id === Number(it.product_id));
+        if (p) bill.push({ ...p, qty: Math.max(1, Math.min(20, Number(it.qty) || 1)) });
+      }
+      renderBill();
+    }
+    const billTotal = () => bill.reduce((s, l) => s + l.price * l.qty, 0);
+    function renderBill() {
+      $('#bill').hidden = !bill.length;
+      if (!bill.length) { billVoucher = null; return; }
+      $('#receipt').innerHTML = '';
+      $('#bill-lines').innerHTML = bill.map((l, i) => `<li><span>${esc(l.icon || '')} ${esc(l.name)}<br><small class="muted">${vnd(l.price)}</small></span>
+        <span class="qty"><button class="btn ghost" data-dec="${i}" aria-label="Bớt">−</button><b>${l.qty}</b><button class="btn ghost" data-inc="${i}" aria-label="Thêm">+</button></span>
+        <b>${vnd(l.price * l.qty)}</b></li>`).join('');
+      const total = billTotal();
+      const vUse = billVoucher ? Math.min(billVoucher.amount, total) : 0;
+      $('#bill-total').textContent = vnd(total);
+      $('#bill-voucher').innerHTML = billVoucher ? `<div class="sum"><span>Voucher <span class="mono">${esc(billVoucher.code)}</span> <button class="btn ghost sm" id="bill-unv">Bỏ</button></span><b>−${vnd(vUse)}</b></div>
+        ${billVoucher.amount > total ? `<p class="warn">Voucher ${vnd(billVoucher.amount)} lớn hơn hóa đơn: phần dư ${vnd(billVoucher.amount - total)} không được hoàn (voucher dùng 1 lần)</p>` : ''}` : '<p class="muted small">Chưa áp voucher – quét mã của khách để trừ vào hóa đơn</p>';
+      $('#bill-cash').textContent = vnd(total - vUse);
+      tell({ type: 'peace:bill', total, voucher: billVoucher?.code || null, cash: total - vUse });
+    }
+    $('#bill').addEventListener('click', (e) => {
+      const d = e.target.closest('[data-dec]'), u = e.target.closest('[data-inc]');
+      if (d) { const l = bill[+d.dataset.dec]; if (--l.qty <= 0) bill.splice(+d.dataset.dec, 1); renderBill(); }
+      if (u) { const l = bill[+u.dataset.inc]; l.qty = Math.min(20, l.qty + 1); renderBill(); }
+      if (e.target.id === 'bill-unv') { billVoucher = null; renderBill(); }
+    });
+    $('#bill-clear').addEventListener('click', () => { bill = []; renderBill(); tell({ type: 'peace:bill-cleared' }); });
+    $('#catalog').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-add]');
+      if (!b) return;
+      const p = catalog.find((x) => x.id === Number(b.dataset.add));
+      const l = bill.find((x) => x.id === p.id);
+      if (l) l.qty = Math.min(20, l.qty + 1); else bill.push({ ...p, qty: 1 });
+      renderBill();
+    });
+    function success(title, sub) {
+      $('#result').innerHTML = `<div class="paid-ok" role="status"><div class="tick">✔</div><div class="big">${esc(title)}</div><p>${esc(sub || '')}</p></div>`;
+    }
+    $('#bill-pay').addEventListener('click', () => pay());
+    async function pay() {
+      const btn = $('#bill-pay'); btn.disabled = true;
+      try {
+        const o = await api('/api/shop/checkout', { method: 'POST', body: JSON.stringify({ items: bill.map((l) => ({ product_id: l.id, qty: l.qty })), voucher: billVoucher?.code || null }) });
+        bill = []; billVoucher = null; renderBill(); $('#result').innerHTML = '';
+        $('#receipt').innerHTML = `<div class="receipt"><b>Đã thanh toán đơn #${o.id}</b>
+          <ul class="hist">${o.items.map((i) => `<li><span>${esc(i.name)} × ${i.qty}</span><b>${vnd(i.price * i.qty)}</b></li>`).join('')}</ul>
+          <div class="row"><span>Tổng</span><b>${vnd(o.total)}</b></div>
+          ${o.voucher ? `<div class="row"><span>Voucher ${esc(o.voucher)}</span><b>−${vnd(o.voucher_amount)}</b></div>` : ''}
+          <div class="row"><span>Tiền mặt</span><b>${vnd(o.cash_amount)}</b></div></div>`;
+        loadHistory();
+        success('THANH TOÁN THÀNH CÔNG', `${vnd(o.total)}${o.voucher ? ` · voucher trừ ${vnd(o.voucher_amount)}` : ''} · tiền mặt ${vnd(o.cash_amount)}`);
+        tell({ type: 'peace:paid', order: o });
+      } catch (err) { $('#result').innerHTML = `<p class="alert">${esc(err.message)}</p>`; tell({ type: 'peace:scan-failed', error: err.message }); }
+      btn.disabled = false;
+    }
+    /** Máy quét ở quầy: quét là trừ luôn (giỏ trống: dùng cả voucher; có hóa đơn: trừ vào hóa đơn rồi thanh toán) */
+    async function autoScan(code) {
+      try {
+        const v = await api('/api/shop/voucher/' + encodeURIComponent(code));
+        if (v.status !== 'active') {
+          card(v, `${ST[v.status]}${v.used_at ? ' lúc ' + v.used_at : ''}${v.merchant ? ' tại ' + v.merchant : ''}`, 'bad');
+          tell({ type: 'peace:scan-failed', code, error: `Voucher ${ST[v.status].toLowerCase()}` });
+          return;
+        }
+        if (bill.length) { billVoucher = v; renderBill(); await pay(); return; }
+        const u = await api('/api/shop/redeem', { method: 'POST', body: JSON.stringify({ code: v.code }) });
+        success('THANH TOÁN THÀNH CÔNG', `Voucher ${u.code} · ${vnd(u.amount)}`);
+        loadHistory();
+        tell({ type: 'peace:redeemed', code: u.code, amount: u.amount });
+      } catch (err) {
+        $('#result').innerHTML = `<p class="alert">${esc(err.message)}</p>`;
+        tell({ type: 'peace:scan-failed', code, error: err.message });
+      }
+    }
+    async function loadHistory() {
+      const rows = await api('/api/shop/history');
+      $('#history').innerHTML = rows.map((v) => `<li><span class="mono">${esc(v.code)}<br><small class="muted">${esc(v.used_at)}</small></span><b>${vnd(v.amount)}</b></li>`).join('')
+        || '<li class="muted">Chưa nhận voucher nào</li>';
+    }
+    function card(v, msg, tone) {
+      $('#result').innerHTML = `<div class="vcard ${tone}">
+        <div class="code">${esc(v.code)}</div><div class="amt">${vnd(v.amount)}</div>
+        <p>${esc(msg)}</p>
+        ${v.status === 'active' ? (bill.length ? `<button class="btn primary" id="apply">Trừ vào hóa đơn</button>`
+          : `<button class="btn primary" id="redeem">Xác nhận dùng ${vnd(v.amount)}</button>`) : ''}</div>`;
+      $('#apply')?.addEventListener('click', () => { billVoucher = v; $('#result').innerHTML = ''; renderBill(); });
+      $('#redeem')?.addEventListener('click', async () => {
+        try {
+          const u = await api('/api/shop/redeem', { method: 'POST', body: JSON.stringify({ code: v.code }) });
+          card(u, 'Đã trừ voucher – thu tiền khách bằng voucher này', 'active'); loadHistory();
+          if (window.parent !== window) window.parent.postMessage({ type: 'peace:redeemed', code: u.code }, location.origin);
+        }
+        catch (e) { $('#result').innerHTML = `<p class="alert">${esc(e.message)}</p>`; }
+      });
+    }
+    async function check(code) {
+      try {
+        const v = await api('/api/shop/voucher/' + encodeURIComponent(code));
+        card(v, v.status === 'active' ? `Hạn tới ${v.expires_at}` : `${ST[v.status]}${v.used_at ? ' lúc ' + v.used_at : ''}${v.merchant ? ' tại ' + v.merchant : ''}`,
+          v.status === 'active' ? 'active' : 'bad');
+      } catch (e) { $('#result').innerHTML = `<p class="alert">${esc(e.message)}</p>`; }
+    }
+    $('#login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const d = await api('/api/shop/login', { method: 'POST', body: JSON.stringify({ code: e.target.code.value, pin: e.target.pin.value }) });
+        $('#login-err').hidden = true; show(d.merchant);
+        if ($('#code').value) check($('#code').value);
+      } catch (err) { $('#login-err').textContent = err.message; $('#login-err').hidden = false; }
+    });
+    $('#logout').addEventListener('click', async () => { await api('/api/shop/logout', { method: 'POST' }); show(null); });
+    $('#check-form').addEventListener('submit', (e) => { e.preventDefault(); check($('#code').value); });
+    const qs = new URLSearchParams(location.search);
+    const pre = qs.get('code');
+    if (pre) $('#code').value = pre;
+    if (qs.get('embed')) document.body.classList.add('embed');
+    // Quầy thu ngân của mô phỏng 3D: khách "đưa mã" từ ví voucher -> máy quét đọc mã
+    window.addEventListener('message', (e) => {
+      if (e.origin !== location.origin) return;
+      if (e.data?.type === 'peace:cart') { setBill(e.data.items); return; }     // giỏ hàng khách mang ra quầy
+      if (e.data?.type !== 'peace:scan') return;
+      $('#code').value = e.data.code;
+      if ($('#main').hidden) return;
+      if (e.data.auto) autoScan(e.data.code); else check(e.data.code);
+    });
+    (async () => {
+      let d = await api('/api/shop/me');
+      // ?demo=1: vào thẳng tài khoản cửa hàng demo (chỉ khi admin bật "cửa hàng demo")
+      if (!d.merchant && qs.get('demo')) d = await api('/api/shop/demo-login', { method: 'POST' }).catch(() => d);
+      show(d.merchant);
+      if (d.merchant?.is_demo) $('#mname').insertAdjacentHTML('beforeend', ' <span class="demo-tag">DEMO</span>');
+      if (d.merchant && pre) check(pre);
+      if (d.merchant) await loadCatalog();      // giỏ hàng từ mô phỏng cần danh mục trước
+      tell({ type: 'peace:ready' });
+    })();
+  </script>
+</body>
+</html>

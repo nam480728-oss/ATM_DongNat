@@ -21,15 +21,21 @@ export function setupScreenEmbed(ctx) {
   wrap.style.width = PX_W + 'px';
   wrap.style.height = PX_H + 'px';
   const iframe = document.createElement('iframe');
-  iframe.src = '/screen';
+  iframe.src = '/screen?station=' + (window.STATION_ID || 1);
   iframe.title = 'Màn hình cảm ứng của trạm';
   iframe.width = PX_W; iframe.height = PX_H;
   wrap.appendChild(iframe);
 
+  // CSS3DRenderer duyệt cả cây scene mỗi lần vẽ -> để iframe trong 1 scene riêng chỉ có nó,
+  // bám theo điểm neo gắn trên màn hình 3D (khung phố lớn không làm chậm lớp HTML)
+  const anchor = new THREE.Object3D();
+  anchor.scale.setScalar(SCREEN_SIZE.w / PX_W);
+  anchor.position.copy(parts.screen.position).add(new THREE.Vector3(0, 0, 0.0004));
+  parts.screenMount.add(anchor);
+  const cssScene = new THREE.Scene();
   const obj = new CSS3DObject(wrap);
-  obj.scale.setScalar(SCREEN_SIZE.w / PX_W);
-  obj.position.copy(parts.screen.position).add(new THREE.Vector3(0, 0, 0.0004));
-  parts.screenMount.add(obj);
+  obj.matrixAutoUpdate = false;
+  cssScene.add(obj);
   ctx.screenIframe = iframe;
 
   // Bấm vào màn hình khi đứng xa -> bay tới bảng thao tác
@@ -42,6 +48,10 @@ export function setupScreenEmbed(ctx) {
   const center = new THREE.Vector3();
   const toCam = new THREE.Vector3();
   let interactive = null;
+  // CSS3DRenderer cập nhật transform của iframe -> chỉ vẽ lại khi camera / màn hình thật sự đổi (đỡ tính lại style mỗi khung)
+  const lastCam = new THREE.Matrix4(), lastObj = new THREE.Matrix4();
+  let lastAspect = 0, forceCss = true;
+  window.addEventListener('resize', () => { forceCss = true; });
   ctx.onFrame.push(() => {
     parts.screen.getWorldPosition(center);
     normal.set(0, 0, 1).applyQuaternion(parts.screen.getWorldQuaternion(new THREE.Quaternion()));
@@ -54,7 +64,12 @@ export function setupScreenEmbed(ctx) {
       wrap.classList.toggle('interactive', near);
       parts.screen.userData.hint = near ? '' : 'Bấm để đến gần màn hình';
     }
-    css.render(scene, camera);
+    anchor.updateWorldMatrix(true, false);
+    if (forceCss || !lastCam.equals(camera.matrixWorld) || !lastObj.equals(anchor.matrixWorld) || lastAspect !== camera.aspect) {
+      lastCam.copy(camera.matrixWorld); lastObj.copy(anchor.matrixWorld); lastAspect = camera.aspect; forceCss = false;
+      obj.matrix.copy(anchor.matrixWorld);
+      css.render(cssScene, camera);
+    }
   });
 
   window.addEventListener('resize', () => css.setSize(window.innerWidth, window.innerHeight));

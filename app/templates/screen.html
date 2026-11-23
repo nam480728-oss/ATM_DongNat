@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=1280, height=800, user-scalable=no">
-  <title>Màn hình trạm – ATM Đồng Nát</title>
+  <title>Màn hình – {{ station.name }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -13,7 +13,8 @@
 <body>
   <div id="app" class="screen">
     <header class="bar">
-      <div class="brand"><span class="logo">♻</span> ATM Đồng Nát</div>
+      <div class="brand"><span class="logo">♻</span> PEACE <small id="bar-station" class="bar-station">{{ station.code ~ ' · ' if station.code }}{{ station.name }}</small>
+        <span id="bar-rec" class="bar-rec" title="Khu vực có camera giám sát">● REC</span></div>
       <div id="bar-user" class="bar-user"></div>
       <div id="clock" class="clock"></div>
     </header>

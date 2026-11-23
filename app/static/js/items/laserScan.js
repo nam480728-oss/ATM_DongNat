@@ -1,18 +1,21 @@
-// Đầu laser vạch (line laser) đặt cạnh camera buồng quét: tia đỏ quét qua mặt phẳng rung từ sau ra trước rồi
-// quay lại. Vạch đỏ được "in" thật lên bề mặt mặt phẳng và rác (shader cắt theo mặt phẳng tia laser),
+// Đầu laser vạch (line laser) đặt cạnh camera khay: tia đỏ quét qua mặt khay từ sau ra trước rồi quay lại. Vạch đỏ được "in" thật lên bề mặt mặt phẳng và rác (shader cắt theo mặt phẳng tia laser),
 // kèm quạt sáng mờ trong không khí và ánh đỏ hắt quanh vạch.
 import * as THREE from 'three';
 import { M } from '../station/materials.js';
 import { box } from '../station/helpers.js';
-import { PLATE, SCAN_CAM } from '../station/interior.js';
+import { CAMS } from '../station/interior.js';
+import { D } from '../station/dims.js';
 
 const gsap = () => window.gsap;
 const RED = new THREE.Color(1.0, 0.06, 0.04);
 
 export function setupLaser(ctx, interior) {
   const g = interior.group;
-  // Vị trí đầu phát: cạnh camera (cùng giá treo), hơi lệch phải
-  const E = new THREE.Vector3(SCAN_CAM.pos[0] + 0.075, SCAN_CAM.pos[1] + 0.004, SCAN_CAM.pos[2]);
+  const TR = D.TRAY, C = CAMS.tray.pos;
+  // vùng quét = mặt khay (khi khay đã đẩy vào)
+  const AREA = { x1: TR.x - TR.w / 2, x2: TR.x + TR.w / 2, y: TR.y, z1: TR.z1, z2: TR.z2 };
+  // Vị trí đầu phát: cạnh camera, hơi lệch phải
+  const E = new THREE.Vector3(C[0] + 0.075, C[1] + 0.004, C[2]);
 
   // ---- Mô hình đầu phát ----
   const head = new THREE.Group();
@@ -31,8 +34,8 @@ export function setupLaser(ctx, interior) {
     uLaserPoint: { value: E.clone() },
     uLaserNormal: { value: new THREE.Vector3(0, 0, 1) },
     uLaserWidth: { value: 0.0032 },
-    uLaserMin: { value: new THREE.Vector3(-0.42, PLATE.y - 0.08, PLATE.z - PLATE.d / 2 - 0.08) },
-    uLaserMax: { value: new THREE.Vector3(0.42, PLATE.y + 0.35, PLATE.z + PLATE.d / 2 + 0.08) },
+    uLaserMin: { value: new THREE.Vector3(AREA.x1 - 0.02, AREA.y - 0.05, AREA.z1 - 0.02) },
+    uLaserMax: { value: new THREE.Vector3(AREA.x2 + 0.02, AREA.y + 0.3, AREA.z2 + 0.02) },
   };
 
   function patch(mat) {
@@ -62,7 +65,7 @@ uniform vec3 uLaserMin; uniform vec3 uLaserMax;
     mat.needsUpdate = true;
   }
 
-  /** Gắn hiệu ứng laser cho mọi mesh trong obj (mặt phẳng rung, rác). Gọi lại nhiều lần vẫn an toàn. */
+  /** Gắn hiệu ứng laser cho mọi mesh trong obj (mặt khay, rác). Gọi lại nhiều lần vẫn an toàn. */
   function attach(obj) {
     obj.traverse((o) => {
       if (!o.isMesh || !o.material) return;
@@ -73,11 +76,11 @@ uniform vec3 uLaserMin; uniform vec3 uLaserMax;
       own.forEach((m) => { if (m.isMeshStandardMaterial) patch(m); });
     });
   }
-  attach(interior.plate);
+  attach(interior.tray);
 
   // ---- Quạt sáng (tấm tam giác cộng sáng) từ đầu phát xuống vạch ----
   const fanGeo = new THREE.BufferGeometry();
-  const halfW = PLATE.w / 2 + 0.01;
+  const halfW = (AREA.x2 - AREA.x1) / 2 + 0.01;
   fanGeo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, -halfW, -1, 0, halfW, -1, 0], 3));
   fanGeo.setAttribute('color', new THREE.Float32BufferAttribute([1, 1, 1, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25], 3));
   const fanMat = new THREE.MeshBasicMaterial({
@@ -98,9 +101,9 @@ uniform vec3 uLaserMin; uniform vec3 uLaserMax;
 
   const X = new THREE.Vector3(1, 0, 0);
   const d = new THREE.Vector3();
-  /** Đặt tia laser chiếu tới điểm z (tọa độ trạm) trên mặt phẳng rung */
+  /** Đặt tia laser chiếu tới điểm z (tọa độ trạm) trên mặt khay */
   function aim(z) {
-    const P = new THREE.Vector3(0, PLATE.y, z);
+    const P = new THREE.Vector3(0, AREA.y, z);
     d.subVectors(P, E);
     const len = d.length();
     d.normalize();
@@ -108,7 +111,7 @@ uniform vec3 uLaserMin; uniform vec3 uLaserMax;
     U.uLaserNormal.value.crossVectors(X, d).normalize();
     fanPivot.rotation.x = Math.atan2(-d.z, -d.y);
     fanPivot.scale.y = len + 0.02;
-    glow.position.set(0, PLATE.y + 0.04, z);
+    glow.position.set(0, AREA.y + 0.04, z);
   }
 
   function setPower(v) {
@@ -120,8 +123,8 @@ uniform vec3 uLaserMin; uniform vec3 uLaserMax;
   }
 
   /** Quét 1 lượt: sau -> trước -> sau. Trả về Promise khi xong. */
-  async function sweep({ forward = 1.1, back = 0.8 } = {}) {
-    const zBack = PLATE.z - PLATE.d / 2 + 0.005, zFront = PLATE.z + PLATE.d / 2 - 0.005;
+  async function sweep({ forward = 0.8, back = 0.55 } = {}) {
+    const zBack = AREA.z1 + 0.005, zFront = AREA.z2 - 0.005;
     const s = { z: zBack, p: 0 };
     const upd = () => { aim(s.z); setPower(s.p); };
     upd();

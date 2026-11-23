@@ -87,3 +87,78 @@ dialog form { text-align: right; margin-top: 8px; }
 .pill.love { background: color-mix(in srgb, #e11d48 13%, transparent); color: #e11d48; }
 .table-wrap.short { max-height: 280px; overflow-y: auto; }
 #charity-total b { font-size: 20px; color: #e11d48; }
+
+.bins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 4px; }
+.bins div { background: color-mix(in srgb, var(--ink) 5%, transparent); border-radius: 10px; padding: 8px 10px; }
+.bins small, .pub small { display: block; color: var(--muted); font-size: 12px; }
+.bins b { font-size: 20px; }
+h3.sub { font-size: 13px; margin: 14px 0 6px; color: var(--muted); }
+.pub { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.pub div { display: grid; gap: 6px; }
+.pub .btn { justify-self: start; }
+
+.jam { background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* ===== hệ thống nhiều trạm ===== */
+.scope { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; color: var(--muted); }
+.scope select, .inline-form input, .inline-form select, #po-method, .st-edit input { font: 14px var(--font); padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); color: var(--ink); }
+.tabs { display: flex; gap: 4px; padding: 8px 24px 0; background: var(--surface); border-bottom: 1px solid var(--line); overflow-x: auto; position: sticky; top: 57px; z-index: 4; }
+.tabs button { font: 600 14px var(--font); border: 0; background: transparent; color: var(--muted); padding: 10px 14px; border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--green); border-bottom-color: var(--green); }
+[data-panel] { display: flex; flex-direction: column; gap: 16px; }
+[data-panel][hidden] { display: none; }
+.inline-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 0; }
+.wrap-form { margin-bottom: 8px; }
+.table-wrap.short { max-height: 380px; overflow-y: auto; }
+tr.click { cursor: pointer; }
+tr.click:hover td { background: color-mix(in srgb, var(--green) 6%, transparent); }
+.pill.info { background: color-mix(in srgb, #0ea5e9 15%, transparent); color: #0284c7; }
+.pill.pink { background: color-mix(in srgb, #e11d48 13%, transparent); color: #e11d48; }
+.warn-t { color: var(--amber); }
+.station-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
+.st-card { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.st-card header { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.st-card p { margin: 0; }
+.st-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.bins { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.bins b { color: var(--ink); }
+.pub { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pub .meter { height: 8px; margin: 3px 0 5px; }
+.st-edit { display: grid; gap: 8px; margin-top: 8px; }
+.st-edit label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.st-edit label.chk { flex-direction: row; align-items: center; gap: 6px; }
+details summary { cursor: pointer; color: var(--green); font-weight: 600; font-size: 13px; }
+.actions { white-space: nowrap; }
+dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); max-width: min(900px, 94vw); }
+dialog.wide { width: min(900px, 94vw); }
+dialog h2 { margin: 0 0 8px; font-size: 18px; }
+dialog h3 { margin: 14px 0 6px; font-size: 14px; }
+.cards.mini b { font-size: 20px; }
+.err { color: var(--red); }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--surface); padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 50; }
+.toast.bad { background: var(--red); color: #fff; }
+.toast.ok { background: var(--green); color: #fff; }
+.settings { grid-template-columns: repeat(3, 1fr); }
+
+/* ---- mã trạm, bản đồ ---- */
+.st-card .code { font-family: ui-monospace, Consolas, monospace; background: var(--ink); color: var(--bg); border-radius: 6px; padding: 1px 6px; font-size: 12px; }
+.map { height: 340px; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 8px; z-index: 0; }
+.map[hidden] { display: none; }
+.st-pin span { display: inline-block; color: #fff; font: 700 11px ui-monospace, Consolas, monospace; padding: 3px 7px; border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35); white-space: nowrap; }
+.wrap-form { flex-wrap: wrap; }
+
+/* ---- an ninh ---- */
+.badge { display: inline-block; min-width: 18px; padding: 0 6px; border-radius: 999px; background: var(--red); color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; }
+.badge[hidden] { display: none; }
+.sec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap: 12px; }
+.sec-card { display: grid; grid-template-columns: 200px 1fr; gap: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+.sec-card.new { border-color: var(--red); box-shadow: 0 0 0 1px var(--red) inset; }
+.sec-card.resolved { opacity: .7; }
+.sec-card header { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.sec-card p { margin: 4px 0; }
+.sec-body { min-width: 0; }
+.thumb.big { width: 200px; height: 150px; }
+.noimg { width: 200px; height: 150px; display: grid; place-items: center; border-radius: 8px; background: var(--line); color: var(--muted); font-size: 12px; }
+.sec-act input { flex: 1; min-width: 120px; }
+@media (max-width: 560px) { .sec-card { grid-template-columns: 1fr; } .thumb.big, .noimg { width: 100%; height: auto; aspect-ratio: 4 / 3; } }

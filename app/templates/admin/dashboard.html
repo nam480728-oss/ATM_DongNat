@@ -3,94 +3,207 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Quản trị – ATM Đồng Nát</title>
+  <title>Quản trị hệ thống – PEACE</title>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='admin/admin.css') }}">
   <script src="{{ url_for('static', filename='vendor/socket.io.min.js') }}"></script>
+  <!-- Bản đồ vị trí trạm: Leaflet + OpenStreetMap (cần Internet; không có mạng thì trang vẫn chạy, chỉ ẩn bản đồ) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="" defer></script>
 </head>
 <body>
   <header class="top">
-    <div class="brand"><span class="logo sm">♻</span> ATM Đồng Nát <span class="tag">Quản trị</span></div>
+    <div class="brand"><span class="logo sm">♻</span> PEACE <span class="tag">Quản trị hệ thống</span></div>
+    <label class="scope">Phạm vi
+      <select id="scope" aria-label="Xem số liệu của"><option value="all">Toàn hệ thống</option></select>
+    </label>
     <nav>
+      <span id="live" class="live">● Trực tiếp</span>
+      <a href="/shop" target="_blank" rel="noopener">Trang cửa hàng ↗</a>
       <a href="/" target="_blank" rel="noopener">Mô phỏng 3D ↗</a>
       <form method="post" action="{{ url_for('admin.logout') }}"><button class="btn ghost sm">Đăng xuất</button></form>
     </nav>
   </header>
 
-  <main class="wrap">
-    <section class="cards" id="cards" aria-label="Tổng quan"></section>
+  <nav class="tabs" role="tablist" aria-label="Mục quản trị">
+    <button role="tab" data-tab="overview" aria-selected="true">Tổng quan</button>
+    <button role="tab" data-tab="stations">Trạm</button>
+    <button role="tab" data-tab="security">An ninh <span class="badge" id="sec-badge" hidden></span></button>
+    <button role="tab" data-tab="users">Người dùng</button>
+    <button role="tab" data-tab="vouchers">Voucher</button>
+    <button role="tab" data-tab="merchants">Cửa hàng</button>
+    <button role="tab" data-tab="txs">Giao dịch</button>
+    <button role="tab" data-tab="settings">Cài đặt</button>
+  </nav>
 
-    <section class="grid2">
+  <main class="wrap">
+    <!-- ================= Tổng quan ================= -->
+    <section data-panel="overview">
+      <div class="cards" id="cards" aria-label="Tổng quan"></div>
+      <div class="grid2">
+        <div class="panel">
+          <div class="panel-head"><h2>Lượt nhận tiền gần đây</h2>
+            <select id="po-method" aria-label="Lọc hình thức"><option value="">Mọi hình thức</option><option value="transfer">Chuyển vào STK</option><option value="voucher">Voucher</option><option value="charity">Từ thiện</option></select></div>
+          <div class="table-wrap short"><table>
+            <thead><tr><th>Thời gian</th><th>Trạm</th><th>Người dùng</th><th>Hình thức</th><th class="num">Số tiền</th></tr></thead>
+            <tbody id="payouts"></tbody></table></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Quỹ từ thiện</h2><span id="charity-total"></span></div>
+          <div class="table-wrap short"><table>
+            <thead><tr><th>Thời gian</th><th>Trạm</th><th>Người góp</th><th class="num">Số tiền</th></tr></thead>
+            <tbody id="charity"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= Trạm ================= -->
+    <section data-panel="stations" hidden>
       <div class="panel">
-        <div class="panel-head"><h2>Kho chứa</h2><span id="live" class="live">● Trực tiếp</span></div>
-        <div id="storage"></div>
-        <button id="empty" class="btn primary">Làm trống kho</button>
-        <p class="muted small" id="emptied"></p>
+        <div class="panel-head"><h2>Các trạm trong hệ thống</h2></div>
+        <div id="map" class="map" aria-label="Bản đồ vị trí các trạm"></div>
+        <p class="muted small" id="map-note">Bấm lên bản đồ để lấy tọa độ cho trạm mới (hoặc kéo ghim của trạm để dời vị trí, rồi bấm Lưu).</p>
+        <form id="new-station" class="inline-form wrap-form">
+          <input name="name" placeholder="Tên trạm mới" required aria-label="Tên trạm mới">
+          <input name="address" placeholder="Số nhà, đường" required aria-label="Số nhà, đường">
+          <input name="ward" placeholder="Phường / xã" required aria-label="Phường / xã">
+          <select name="province" required aria-label="Tỉnh / thành phố"><option value="">Tỉnh / thành phố…</option></select>
+          <input name="lat" placeholder="Vĩ độ" inputmode="decimal" size="9" aria-label="Vĩ độ">
+          <input name="lng" placeholder="Kinh độ" inputmode="decimal" size="9" aria-label="Kinh độ">
+          <button class="btn primary sm">+ Thêm trạm</button>
+        </form>
+        <p class="muted small">Mã trạm cấp tự động theo tỉnh (vd <b>DNG-004</b>) và không đổi về sau – in trên thân trạm để báo hỏng / đối soát.</p>
+        <div id="stations" class="station-grid"></div>
+      </div>
+    </section>
+
+    <!-- ================= An ninh ================= -->
+    <section data-panel="security" hidden>
+      <div class="panel">
+        <div class="panel-head"><h2>Sự cố an ninh <span class="muted small">(camera giám sát trên màn hình trạm)</span></h2>
+          <form id="sec-filter" class="inline-form">
+            <select name="kind" aria-label="Loại sự cố"><option value="">Mọi loại</option><option value="reject_repeat">Bỏ rác lạ nhiều lần</option>
+              <option value="impact">Va đập / đá máy</option><option value="tamper">Cạy khay / cửa</option><option value="camera_blocked">Che camera</option></select>
+            <select name="status" aria-label="Trạng thái"><option value="">Mọi trạng thái</option><option value="new">Mới</option><option value="seen">Đã xem</option><option value="resolved">Đã xử lý</option></select>
+          </form>
+        </div>
+        <div id="security" class="sec-grid"></div>
+      </div>
+    </section>
+
+    <!-- ================= Người dùng ================= -->
+    <section data-panel="users" hidden>
+      <div class="panel">
+        <div class="panel-head"><h2>Người dùng <span class="muted small" id="user-count"></span></h2>
+          <form id="user-search" class="inline-form">
+            <input name="q" type="search" placeholder="Tìm theo SĐT hoặc tên…" aria-label="Tìm người dùng">
+          </form>
+          <form id="new-user" class="inline-form">
+            <input name="phone" placeholder="Số điện thoại" inputmode="numeric" required aria-label="Số điện thoại">
+            <input name="name" placeholder="Họ tên" required aria-label="Họ tên">
+            <button class="btn primary sm">+ Thêm</button>
+          </form>
+        </div>
+        <p class="muted small">Một tài khoản (số điện thoại) dùng chung ở mọi trạm. Trạm không lưu số tài khoản ngân hàng.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>SĐT</th><th>Họ tên</th><th class="num">Số dư chờ</th><th class="num">Đã chuyển</th><th class="num">Voucher</th><th class="num">Từ thiện</th><th class="num">Lượt</th><th>Trạm gần nhất</th><th>Dùng gần nhất</th><th>Trạng thái</th></tr></thead>
+          <tbody id="users"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ================= Voucher ================= -->
+    <section data-panel="vouchers" hidden>
+      <div class="panel">
+        <div class="panel-head"><h2>Voucher</h2>
+          <form id="v-filter" class="inline-form">
+            <select name="status" aria-label="Trạng thái"><option value="">Mọi trạng thái</option><option value="active">Còn hiệu lực</option><option value="used">Đã dùng</option><option value="expired">Hết hạn</option><option value="void">Đã hủy</option></select>
+            <input name="q" type="search" placeholder="Mã voucher…" aria-label="Mã voucher">
+          </form>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Mã</th><th class="num">Mệnh giá</th><th>Người nhận</th><th>Trạm</th><th>Tạo lúc</th><th>Hạn</th><th>Trạng thái</th><th>Dùng tại</th><th></th></tr></thead>
+          <tbody id="vouchers"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ================= Cửa hàng ================= -->
+    <section data-panel="merchants" hidden>
+      <div class="panel">
+        <div class="panel-head"><h2>Cửa hàng / nhà xe nhận voucher</h2></div>
+        <form id="new-merchant" class="inline-form wrap-form">
+          <input name="code" placeholder="Mã đăng nhập (vd XEBUYT01)" required aria-label="Mã cửa hàng">
+          <input name="name" placeholder="Tên cửa hàng" required aria-label="Tên">
+          <select name="kind" aria-label="Loại"><option value="shop">Cửa hàng</option><option value="parking">Nhà xe / vé xe</option><option value="other">Khác</option></select>
+          <input name="address" placeholder="Địa chỉ" aria-label="Địa chỉ">
+          <input name="pin" placeholder="PIN 4–8 số" inputmode="numeric" required aria-label="PIN">
+          <button class="btn primary sm">+ Thêm cửa hàng</button>
+        </form>
+        <p class="muted small">Người bán mở <b>/shop</b> trên điện thoại, đăng nhập bằng mã + PIN, quét mã QR của khách (hoặc gõ mã) để trừ voucher.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Mã</th><th>Tên</th><th>Loại</th><th>Địa chỉ</th><th class="num">Đã nhận</th><th class="num">Tổng tiền</th><th>Trạng thái</th><th>Demo 3D</th><th></th></tr></thead>
+          <tbody id="merchants"></tbody></table></div>
       </div>
       <div class="panel">
-        <div class="panel-head"><h2>Cấu hình giá &amp; sức chứa</h2></div>
+        <div class="panel-head"><h2>Đơn bán ở quầy <span class="muted small">(voucher trừ trước, thiếu thì tiền mặt)</span></h2></div>
+        <div class="table-wrap short"><table>
+          <thead><tr><th>#</th><th>Thời gian</th><th>Cửa hàng</th><th>Món</th><th class="num">Tổng</th><th>Voucher</th><th class="num">Voucher trả</th><th class="num">Tiền mặt</th></tr></thead>
+          <tbody id="orders"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ================= Giao dịch ================= -->
+    <section data-panel="txs" hidden>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Giao dịch</h2>
+          <form id="filter" class="filter">
+            <select name="status" aria-label="Lọc theo trạng thái">
+              <option value="">Mọi trạng thái</option>
+              <option value="accepted">Đã nhận</option><option value="rejected">Trả rác</option>
+              <option value="scan_failed">Quét lỗi</option><option value="empty">Khay trống</option>
+            </select>
+            <select name="source" aria-label="Lọc theo nguồn">
+              <option value="">Khay + lỗ từ thiện</option><option value="tray">Khay nạp</option><option value="slot">Lỗ từ thiện</option>
+            </select>
+            <select name="payout" aria-label="Lọc theo hình thức nhận tiền">
+              <option value="">Mọi hình thức</option><option value="transfer">Chuyển vào STK</option><option value="voucher">Voucher</option>
+              <option value="charity">Từ thiện</option><option value="held">Lưu vào tài khoản / giữ số dư</option><option value="none">Chưa chọn / không có tiền</option>
+            </select>
+            <input type="date" name="date_from" aria-label="Từ ngày">
+            <input type="date" name="date_to" aria-label="Đến ngày">
+            <button class="btn ghost sm">Lọc</button>
+          </form>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>#</th><th>Thời gian</th><th>Trạm</th><th>Người dùng</th><th>Nguồn</th><th>Trạng thái</th><th class="num">Nhựa</th><th class="num">Kim loại</th><th class="num">Tiền</th><th>Nhận tiền</th><th>Ảnh quét</th><th>Rác lỗi</th></tr></thead>
+          <tbody id="txs"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ================= Cài đặt ================= -->
+    <section data-panel="settings" hidden>
+      <div class="panel">
+        <div class="panel-head"><h2>Cấu hình chung (mọi trạm)</h2></div>
         <form id="settings" class="settings">
           <label>Giá 1 món nhựa (đ)<input name="price_bottle" type="number" min="0" max="100000" step="50" required></label>
           <label>Giá 1 món kim loại (đ)<input name="price_can" type="number" min="0" max="100000" step="50" required></label>
-          <label>Sức chứa kho (vật)<input name="storage_capacity" type="number" min="10" max="100000" required></label>
+          <label>Thời gian chọn cách nhận (giây)<input name="payout_timeout_sec" type="number" min="15" max="600" required></label>
+          <label>Hạn voucher (ngày)<input name="voucher_days" type="number" min="1" max="365" required></label>
+          <label>Sức chứa thùng rác mini (vật)<input name="public_capacity" type="number" min="5" max="1000" required></label>
+          <label>Tự đăng xuất (giây)<input name="idle_timeout_sec" type="number" min="30" max="1800" required></label>
+          <label>An ninh: rác lạ / phiên thì báo<input name="security_reject_session" type="number" min="1" max="50" required></label>
+          <label>An ninh: rác lạ / 24 giờ thì báo<input name="security_reject_day" type="number" min="1" max="200" required></label>
+          <label>An ninh: báo lại cùng loại sau (giây)<input name="security_cooldown_sec" type="number" min="0" max="3600" required></label>
           <button class="btn primary">Lưu</button>
           <span class="muted small" id="settings-msg"></span>
         </form>
       </div>
     </section>
-
-    <section class="panel">
-      <div class="panel-head"><h2>Người dùng</h2><span class="muted small" id="user-count"></span></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Tên</th><th>STK</th><th class="num">Đã nhận</th><th class="num">Từ thiện</th><th class="num">Lượt</th><th>Tạo lúc</th><th>Dùng gần nhất</th><th></th></tr></thead>
-          <tbody id="users"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head"><h2>Quỹ từ thiện</h2><span id="charity-total"></span></div>
-      <div class="table-wrap short">
-        <table>
-          <thead><tr><th>Thời gian</th><th>Người góp</th><th class="num">Nhựa</th><th class="num">Kim loại</th><th class="num">Số tiền</th></tr></thead>
-          <tbody id="charity"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Giao dịch</h2>
-        <form id="filter" class="filter">
-          <select name="user_id" aria-label="Lọc theo người dùng"><option value="">Mọi người dùng</option></select>
-          <select name="status" aria-label="Lọc theo trạng thái">
-            <option value="">Mọi trạng thái</option>
-            <option value="accepted">Đã nhận</option><option value="rejected">Trả rác</option>
-            <option value="scan_failed">Quét lỗi</option><option value="empty">Khay trống</option>
-          </select>
-          <select name="source" aria-label="Lọc theo nguồn">
-            <option value="">Khay + lỗ bỏ</option><option value="tray">Khay nạp</option><option value="slot">Lỗ bỏ chai</option>
-          </select>
-          <select name="payout" aria-label="Lọc theo hình thức nhận tiền">
-            <option value="">Mọi hình thức</option><option value="transfer">Chuyển khoản</option>
-            <option value="charity">Từ thiện</option><option value="none">Chưa chọn / không có tiền</option>
-          </select>
-          <input type="date" name="date_from" aria-label="Từ ngày">
-          <input type="date" name="date_to" aria-label="Đến ngày">
-          <button class="btn ghost sm">Lọc</button>
-        </form>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>#</th><th>Thời gian</th><th>Người dùng</th><th>Nguồn</th><th>Trạng thái</th><th class="num">Nhựa</th><th class="num">Kim loại</th><th class="num">Tiền</th><th>Nhận tiền</th><th>Ảnh quét</th><th>Rác lỗi</th></tr></thead>
-          <tbody id="txs"></tbody>
-        </table>
-      </div>
-    </section>
   </main>
 
   <dialog id="viewer"><img alt="Ảnh quét"><form method="dialog"><button class="btn ghost sm">Đóng</button></form></dialog>
+  <dialog id="prod-dlg" class="wide"><div id="prod-detail"></div><form method="dialog"><button class="btn ghost sm">Đóng</button></form></dialog>
+  <dialog id="user-dlg" class="wide"><div id="user-detail"></div><form method="dialog"><button class="btn ghost sm">Đóng</button></form></dialog>
   <script type="module" src="{{ url_for('static', filename='admin/admin.js') }}"></script>
 </body>
 </html>

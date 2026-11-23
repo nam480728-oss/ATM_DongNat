@@ -1,4 +1,5 @@
-"""Xóa dữ liệu test (người dùng có tên bắt đầu bằng 'Test ' hoặc STK bắt đầu bằng 9000/0987654321) khỏi atm_db.
+"""Xóa dữ liệu test (người dùng có tên bắt đầu bằng 'Test ' hoặc SĐT 0999xxxxxx) khỏi atm_db (kèm giao dịch,
+lượt nhận tiền, voucher của họ).
 
 Chạy:  python tools/cleanup_test_data.py
 """
@@ -9,12 +10,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import create_app  # noqa: E402
-from app.models import RejectedItem, Transaction, User, db  # noqa: E402
+from app.models import Payout, RejectedItem, Transaction, User, Voucher, db  # noqa: E402
 
 app = create_app(detector=None)
 with app.app_context():
     users = User.query.filter(
-        (User.name.like("Test %")) | (User.account_number.like("9000%")) | (User.account_number == "0987654321")
+        (User.name.like("Test %")) | (User.phone.like("0999%"))
     ).all()
     for u in users:
         for tx in Transaction.query.filter_by(user_id=u.id).all():
@@ -23,6 +24,8 @@ with app.app_context():
             if tx.image_path:
                 (app.config["DATA_DIR"] / tx.image_path).unlink(missing_ok=True)
             db.session.delete(tx)
+        Payout.query.filter_by(user_id=u.id).delete()
+        Voucher.query.filter_by(user_id=u.id).delete()
         print("xóa", u.id, u.name)
         db.session.delete(u)
     db.session.commit()

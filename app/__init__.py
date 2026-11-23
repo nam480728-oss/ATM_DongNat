@@ -61,23 +61,39 @@ def create_app(config_class=Config, hal=None, detector="auto", spawn=None):
             detector, detector_error = None, str(e)
             log.error("Detector: %s", e)
 
-    # ---- Phần cứng + controller ----
+    # ---- Nhiều trạm trên 1 server trung tâm: mỗi trạm 1 controller + 1 phần cứng (mô phỏng: room 'sim:<id>')
     from .station.controller import StationController
     from .station.hal import SimulatedHardware
-    if hal is None:
-        hal = SimulatedHardware(socketio, timeout=app.config["ACTUATOR_TIMEOUT_SEC"])
 
-    def emit(event, data):
-        socketio.emit(event, data)
-
-    app.extensions["station"] = StationController(
-        app, hal, detector, emit,
+    app.extensions["stations"] = {}
+    app.extensions["station_factory"] = lambda sid, hal=None: StationController(
+        app, hal or SimulatedHardware(socketio, timeout=app.config["ACTUATOR_TIMEOUT_SEC"], room=f"sim:{sid}"),
+        app.extensions["station"].detector if "station" in app.extensions else detector,   # trạm mới dùng bộ nhận diện hiện tại
+        station_emitter(sid),
         spawn=spawn or (lambda fn: socketio.start_background_task(fn)),
-        detector_error=detector_error,
+        detector_error=app.extensions["station"].detector_error if "station" in app.extensions else detector_error,
+        station_id=sid,
     )
+    first = app.config["STATION_ID"]
+    ctrl = app.extensions["station_factory"](first, hal)
+    app.extensions["stations"][first] = ctrl
+    app.extensions["station"] = ctrl          # trạm mặc định (test, API cũ)
 
-    from .routes import admin, api, main
+    # Thêm ?v=<thời điểm sửa file> vào mọi link file tĩnh: sửa JS / CSS là trình duyệt (kể cả iframe màn hình trạm)
+    # tải bản mới ngay, không dùng bản cũ trong bộ nhớ đệm
+    import os
+
+    @app.url_defaults
+    def _static_version(endpoint, values):
+        if endpoint == "static" and "filename" in values and "v" not in values:
+            try:
+                values["v"] = int(os.path.getmtime(os.path.join(app.static_folder, values["filename"])))
+            except OSError:
+                pass
+
+    from .routes import admin, api, main, shop
     app.register_blueprint(main.bp)
+    app.register_blueprint(shop.bp)
     app.register_blueprint(api.bp)
     app.register_blueprint(admin.bp)
 
@@ -86,16 +102,47 @@ def create_app(config_class=Config, hal=None, detector="auto", spawn=None):
     return app
 
 
-def start_ticker(app):
-    """Luồng nền gọi controller.tick() mỗi giây (tự đăng xuất)."""
-    ctrl = app.extensions["station"]
+ADMIN_EVENTS = {"state", "result", "payout", "slot:result"}
 
+
+def station_emitter(sid: int):
+    """Sự kiện của trạm chỉ gửi tới màn hình + mô phỏng của trạm đó; trang admin nhận bản tin ngắn để làm mới."""
+    def emit(event, data):
+        socketio.emit(event, data, to=f"st:{sid}")
+        if event in ADMIN_EVENTS:
+            socketio.emit("admin:update", {"station": sid, "event": event}, to="admin")
+        elif event == "security":     # sự cố an ninh: admin hiện thông báo ngay (ảnh xem qua API có đăng nhập)
+            socketio.emit("admin:security", data, to="admin")
+    return emit
+
+
+def get_controller(app, sid, create: bool = True):
+    """Controller của trạm `sid` (tạo khi trạm được mở lần đầu, nếu trạm có trong CSDL và đang hoạt động)."""
+    stations = app.extensions["stations"]
+    try:
+        sid = int(sid)
+    except (TypeError, ValueError):
+        sid = app.config["STATION_ID"]
+    if sid in stations or not create:
+        return stations.get(sid)
+    from .models import Station
+    with app.app_context():
+        st = db.session.get(Station, sid)
+        if st is None or not st.is_active:
+            return None
+    stations[sid] = app.extensions["station_factory"](sid)
+    return stations[sid]
+
+
+def start_ticker(app):
+    """Luồng nền gọi controller.tick() của mọi trạm mỗi giây (giữ tiền khi hết giờ chọn, tự đăng xuất)."""
     def loop():
         while True:
             time.sleep(1)
-            try:
-                ctrl.tick()
-            except Exception:
-                log.exception("tick failed")
+            for ctrl in list(app.extensions["stations"].values()):
+                try:
+                    ctrl.tick()
+                except Exception:
+                    log.exception("tick failed")
 
     socketio.start_background_task(loop)

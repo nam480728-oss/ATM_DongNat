@@ -1,76 +1,125 @@
-"""Nghiệp vụ người dùng: tạo, tìm, tên hiển thị (trùng tên thì thêm 4 số cuối STK)."""
+"""Nghiệp vụ người dùng: định danh bằng số điện thoại (dùng chung mọi trạm), tên che bớt trên màn hình trạm."""
 import re
 import unicodedata
-from collections import Counter
+from datetime import datetime
+
+from sqlalchemy import or_
 
 from app.models import User, db
 
-ACCOUNT_RE = re.compile(r"^\d{6,19}$")
+PHONE_RE = re.compile(r"^0[35789]\d{8}$")
 
 
 class UserError(ValueError):
     """Lỗi nghiệp vụ, message hiển thị thẳng lên màn hình (tiếng Việt)."""
 
 
-def normalize_name(name: str) -> str:
-    """Chuẩn hóa để so trùng tên: bỏ khoảng trắng thừa, NFC, không phân biệt hoa thường."""
-    name = unicodedata.normalize("NFC", " ".join((name or "").split()))
-    return name.casefold()
+def normalize_phone(phone: str) -> str:
+    """'+84 912 345 678' | '0912.345.678' -> '0912345678'."""
+    p = re.sub(r"\D", "", str(phone or ""))
+    if p.startswith("84") and len(p) == 11:
+        p = "0" + p[2:]
+    return p
+
+
+def valid_phone(phone: str) -> bool:
+    return bool(PHONE_RE.match(phone))
 
 
 def clean_name(name: str) -> str:
     return unicodedata.normalize("NFC", " ".join((name or "").split()))
 
 
-def create_user(name: str, account_number: str) -> User:
-    name = clean_name(name)
-    account_number = (account_number or "").strip().replace(" ", "")
+def mask_name(name: str) -> str:
+    """'Nguyễn Văn An' -> 'Nguyễn V** A*' (người đứng sau không đọc được tên đầy đủ của người khác)."""
+    words = clean_name(name).split(" ")
+    if not words or not words[0]:
+        return ""
+    if len(words) == 1:
+        return words[0][0] + "*" * (len(words[0]) - 1)
+    return " ".join([words[0], *(w[0] + "*" * (len(w) - 1) for w in words[1:])])
+
+
+def mask_phone(phone: str) -> str:
+    """'0912345678' -> '091****678'."""
+    return phone[:3] + "*" * max(0, len(phone) - 6) + phone[-3:] if len(phone) >= 7 else phone
+
+
+def find_by_phone(phone: str) -> User | None:
+    phone = normalize_phone(phone)
+    return User.query.filter_by(phone=phone).first() if phone else None
+
+
+def create_user(phone: str, name: str, station_id: int | None = None) -> User:
+    phone, name = normalize_phone(phone), clean_name(name)
+    if not valid_phone(phone):
+        raise UserError("Số điện thoại không hợp lệ (10 số, bắt đầu bằng 03, 05, 07, 08, 09)")
     if not name:
-        raise UserError("Vui lòng nhập tên")
+        raise UserError("Vui lòng nhập họ tên")
     if len(name) > 100:
         raise UserError("Tên tối đa 100 ký tự")
-    if not ACCOUNT_RE.match(account_number):
-        raise UserError("Số tài khoản phải gồm 6–19 chữ số")
-    if User.query.filter_by(account_number=account_number).first():
-        raise UserError("Số tài khoản này đã được đăng ký")
-    user = User(name=name, account_number=account_number)
+    if find_by_phone(phone):
+        raise UserError("Số điện thoại này đã được đăng ký")
+    user = User(phone=phone, name=name, created_station_id=station_id, last_station_id=station_id,
+                created_at=datetime.now())
     db.session.add(user)
     db.session.commit()
     return user
 
 
-def active_users():
-    return User.query.filter_by(is_active=True)
+def update_user(user: User, phone: str | None = None, name: str | None = None, is_active: bool | None = None) -> User:
+    if phone is not None:
+        phone = normalize_phone(phone)
+        if not valid_phone(phone):
+            raise UserError("Số điện thoại không hợp lệ")
+        other = find_by_phone(phone)
+        if other and other.id != user.id:
+            raise UserError("Số điện thoại này đã thuộc người dùng khác")
+        user.phone = phone
+    if name is not None:
+        name = clean_name(name)
+        if not name or len(name) > 100:
+            raise UserError("Họ tên không hợp lệ")
+        user.name = name
+    if is_active is not None:
+        user.is_active = bool(is_active)
+    db.session.commit()
+    return user
 
 
-def display_names(users: list[User]) -> dict[int, str]:
-    """Tên hiển thị. Trùng tên (trong toàn bộ người dùng đang hoạt động) -> 'Tên (*1234)'."""
-    counts = Counter(normalize_name(n) for (n,) in db.session.query(User.name).filter_by(is_active=True))
-    return {
-        u.id: f"{u.name} (*{u.last4})" if counts[normalize_name(u.name)] > 1 else u.name
-        for u in users
-    }
-
-
-def search_users(q: str | None = None, limit: int = 100) -> list[dict]:
-    query = active_users()
-    users = query.order_by(User.last_used_at.desc(), User.name).all()
-    if q:
-        nq = normalize_name(q)
-        users = [u for u in users if nq in normalize_name(u.name)]
-    users = users[:limit]
-    names = display_names(users)
-    return [user_to_dict(u, names[u.id]) for u in users]
-
-
-def user_to_dict(u: User, display_name: str | None = None) -> dict:
-    if display_name is None:
-        display_name = display_names([u])[u.id]
+def user_to_dict(u: User) -> dict:
+    """Thông tin hiển thị trên MÀN HÌNH TRẠM (công khai): tên + SĐT đã che bớt."""
     return {
         "id": u.id,
-        "name": u.name,
-        "display_name": display_name,
-        "masked_account": u.masked_account,
+        "display_name": mask_name(u.name),
+        "initial": (u.name or "?")[0],
+        "phone": mask_phone(u.phone),
+        "balance": int(u.balance or 0),
         "total_received": int(u.total_received or 0),
         "total_donated": int(u.total_donated or 0),
+        "total_voucher": int(u.total_voucher or 0),
     }
+
+
+def admin_user_dict(u: User) -> dict:
+    """Thông tin đầy đủ cho trang admin."""
+    iso = lambda d: d.isoformat(" ", "minutes") if d else None   # noqa: E731
+    return {
+        "id": u.id, "phone": u.phone, "name": u.name, "is_active": bool(u.is_active),
+        "balance": int(u.balance or 0), "total_received": int(u.total_received or 0),
+        "total_donated": int(u.total_donated or 0), "total_voucher": int(u.total_voucher or 0),
+        "created_station_id": u.created_station_id, "last_station_id": u.last_station_id,
+        "created_at": iso(u.created_at), "last_used_at": iso(u.last_used_at),
+    }
+
+
+def search_users(q: str | None = None, limit: int = 200) -> list[User]:
+    query = User.query
+    if q:
+        q = q.strip()
+        digits = re.sub(r"\D", "", q)
+        conds = [User.name.ilike(f"%{q}%")]
+        if digits:
+            conds.append(User.phone.like(f"%{normalize_phone(digits) if len(digits) >= 10 else digits}%"))
+        query = query.filter(or_(*conds))
+    return query.order_by(User.last_used_at.desc(), User.id.desc()).limit(limit).all()

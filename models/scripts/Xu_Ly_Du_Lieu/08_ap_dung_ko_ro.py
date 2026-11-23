@@ -53,7 +53,7 @@ def main():
         dst.mkdir(parents=True, exist_ok=True)
         shutil.move(str(p), dst / p.name)
     xuat.main()
-    log("  -> chạy 07_kiem_tra.py để kiểm tra lại")
+    log("  -> kiểm tra lại bằng models/scripts/Train/00_kiem_tra.py")
 
 
 if __name__ == "__main__":

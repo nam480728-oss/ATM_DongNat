@@ -61,8 +61,8 @@ def main():
          f"**Ngưỡng other: {t_o:.2f}** (chấm theo trạm, mục 5 `BAO_CAO_TRAIN.md`).",
          "- **Luật dùng ở trạm (`app/station/controller.py`, plan_train.md mục 11.7):** mỗi mẻ 10–15 vật đổ lên khay, "
          f"rung đến khi không chồng nhau rồi chụp. Có khung other ≥ {t_o:.2f} -> **TRẢ cả mẻ**; không có -> NHẬN, "
-         f"đếm chai/lon theo khung plastic/metal ≥ {t:.2f}. Tùy chọn: `models/scripts/so_nen.py` so với ảnh khay trống "
-         "để trả cả vật model không khoanh được.", "",
+         f"đếm chai/lon theo khung plastic/metal ≥ {t:.2f}. So nền khay (`app/detection/background.py`) "
+         "so với ảnh khay trống để trả cả vật model không khoanh được.", "",
          "## Dữ liệu", "",
          f"`models/data_da_xu_ly/` (xem `BAO_CAO.md` ở đó): train {n['train']:,} / val {n['val']:,} / test {n['test']:,} ảnh; "
          f"box plastic {box['plastic']:,}, metal {box['metal']:,}, other {box['other']:,}. "
@@ -84,7 +84,7 @@ def main():
          f"co_rac = any(c == 2 and s >= {t_o:.2f} for c, s in zip(r.boxes.cls.tolist(), r.boxes.conf.tolist()))", "```", "",
          "## Giới hạn đã biết", "",
          "- Ảnh train chủ yếu từ internet, 77% ảnh chỉ có 1 vật; cần thử lại trên khay thật với mẻ 10–15 vật.",
-         "- Vật hoàn toàn lạ vẫn có thể không bị phát hiện -> so nền khay (`so_nen.py`) để chặn thêm.", ""]
+         "- Vật hoàn toàn lạ vẫn có thể không bị phát hiện -> so nền khay (`app/detection/background.py`) để chặn thêm.", ""]
     (MODEL_DIR / "MODEL_CARD.md").write_text("\n".join(L), encoding="utf-8")
     print(f"T5 xong: {MODEL_DIR / 'best.pt'}{', best.onnx' if onnx_ok else ''}, MODEL_CARD.md (ngưỡng {t:.2f})")
 

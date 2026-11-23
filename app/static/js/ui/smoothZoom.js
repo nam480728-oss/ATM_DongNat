@@ -12,6 +12,8 @@ export function setupSmoothZoom(ctx, { min = 0.12, max = 9, speed = 0.0016, smoo
 
   // Điểm neo: bề mặt dưới con trỏ (nếu có), không thì điểm trên tia cách camera bằng khoảng tới target
   function pickAnchor(e) {
+    // camera bám nhân vật: zoom về đúng nhân vật (tâm quay), không về điểm dưới con trỏ
+    if (ctx.zoomToTarget) { anchor.copy(controls.target); return; }
     const r = dom.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
@@ -47,7 +49,8 @@ export function setupSmoothZoom(ctx, { min = 0.12, max = 9, speed = 0.0016, smoo
     let s = Math.exp(step);
     // giới hạn khoảng cách camera -> target
     const d = camera.position.distanceTo(controls.target);
-    const nd = THREE.MathUtils.clamp(d * s, min, max);
+    const lim = ctx.zoomLimits || { min, max };      // chế độ nhân vật đặt giới hạn riêng (sau lưng / trên cao)
+    const nd = THREE.MathUtils.clamp(d * s, lim.min, lim.max);
     if (Math.abs(nd - d) < 1e-6) { pending = 0; return; }
     s = nd / d;
     // phép vị tự quanh điểm neo: điểm dưới con trỏ đứng yên trên màn hình

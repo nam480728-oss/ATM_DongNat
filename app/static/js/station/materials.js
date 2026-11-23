@@ -20,9 +20,11 @@ export const M = {
   steel: new THREE.MeshStandardMaterial({ color: COLORS.steel, roughness: 0.25, metalness: 1.0 }),
   cavity: new THREE.MeshStandardMaterial({ color: 0x2a3036, roughness: 0.85, metalness: 0.1 }),
   trayPlastic: new THREE.MeshStandardMaterial({ color: 0x3a4148, roughness: 0.6, metalness: 0.05 }),
+  // Kính cửa khoang nạp: trong suốt thường (KHÔNG dùng transmission – khúc xạ bắt three.js vẽ lại cả cảnh
+  // thêm 1 lượt mỗi khung hình, chiếm ~2/3 thời gian vẽ khi có cả khung phố)
   glass: new THREE.MeshPhysicalMaterial({
-    color: 0xdff5e8, roughness: 0.38, metalness: 0, transmission: 0.82, thickness: 0.008,
-    ior: 1.45, transparent: true, opacity: 1,
+    color: 0xdff5e8, roughness: 0.15, metalness: 0, transparent: true, opacity: 0.3,
+    clearcoat: 1, clearcoatRoughness: 0.1, depthWrite: false,
   }),
   screenOff: new THREE.MeshStandardMaterial({ color: 0x050a08, roughness: 0.15, metalness: 0.3 }),
 };

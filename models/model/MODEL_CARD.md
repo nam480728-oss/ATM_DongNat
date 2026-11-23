@@ -3,7 +3,7 @@
 - **File:** `best.pt` + `best.onnx` (chép từ `y11s_1119_02/weights/best.pt`, ngày 19/11/2026)
 - **Kiến trúc:** YOLO11s, khởi tạo từ trọng số COCO, fine-tune 3 lớp: `0=plastic`, `1=metal`, `2=other`
 - **Ảnh vào:** 640 px. **Ngưỡng nhựa/kim loại: 0.85** (chọn trên val: ngưỡng thấp nhất đạt precision nhựa/kim loại và từ chối vật lạ). **Ngưỡng other: 0.80** (chấm theo trạm, mục 5 `BAO_CAO_TRAIN.md`).
-- **Luật dùng ở trạm (`app/station/controller.py`, plan_train.md mục 11.7):** mỗi mẻ 10–15 vật đổ lên khay, rung đến khi không chồng nhau rồi chụp. Có khung other ≥ 0.80 -> **TRẢ cả mẻ**; không có -> NHẬN, đếm chai/lon theo khung plastic/metal ≥ 0.85. Tùy chọn: `models/scripts/so_nen.py` so với ảnh khay trống để trả cả vật model không khoanh được.
+- **Luật dùng ở trạm (`app/station/controller.py`, plan_train.md mục 11.7):** mỗi mẻ 10–15 vật đổ lên khay, rung đến khi không chồng nhau rồi chụp. Có khung other ≥ 0.80 -> **TRẢ cả mẻ**; không có -> NHẬN, đếm chai/lon theo khung plastic/metal ≥ 0.85. So nền khay (`app/detection/background.py`) so với ảnh khay trống để trả cả vật model không khoanh được.
 
 ## Dữ liệu
 
@@ -35,4 +35,4 @@ co_rac = any(c == 2 and s >= 0.80 for c, s in zip(r.boxes.cls.tolist(), r.boxes.
 ## Giới hạn đã biết
 
 - Ảnh train chủ yếu từ internet, 77% ảnh chỉ có 1 vật; cần thử lại trên khay thật với mẻ 10–15 vật.
-- Vật hoàn toàn lạ vẫn có thể không bị phát hiện -> so nền khay (`so_nen.py`) để chặn thêm.
+- Vật hoàn toàn lạ vẫn có thể không bị phát hiện -> so nền khay (`app/detection/background.py`) để chặn thêm.

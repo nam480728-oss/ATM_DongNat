@@ -27,3 +27,9 @@ models/data_da_xu_ly/
 models/tools/clip/
 models/tools/yolov8x-worldv2.pt
 !models/model/**/tien_do.log
+
+# Bản sao lưu database (tools/backup_db.py) – có dữ liệu người dùng
+backups/
+
+# File nén toàn bộ dữ liệu train (~13 GB)
+models.rar

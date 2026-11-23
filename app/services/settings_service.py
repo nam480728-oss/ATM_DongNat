@@ -30,11 +30,11 @@ def get_prices() -> tuple[int, int]:
     return get_int("price_bottle"), get_int("price_can")
 
 
-def get_station() -> Station:
-    sid = current_app.config["STATION_ID"]
+def get_station(station_id: int | None = None) -> Station:
+    sid = station_id or current_app.config["STATION_ID"]
     station = db.session.get(Station, sid)
     if station is None:  # phòng khi bảng station trống
-        station = Station(id=sid)
+        station = Station(id=sid, name=f"ATM Đồng Nát – Trạm {sid}")
         db.session.add(station)
         db.session.commit()
     return station

@@ -223,3 +223,113 @@ button { font-family: inherit; }
   background: #ff3b30; box-shadow: 0 0 10px 3px rgba(255, 40, 30, .75), 0 0 28px 8px rgba(255, 40, 30, .3); }
 .scanview.fresh .scan-img::after { animation: laserpass 1.1s ease-in-out .15s; }
 @keyframes laserpass { 0% { top: 0; opacity: 1; } 90% { opacity: 1; } 100% { top: calc(100% - 3px); opacity: 0; } }
+
+/* ---- Cảnh báo rác lạ (cửa bung hé) ---- */
+.banner.info { background: rgba(56, 189, 248, .14); border: 1px solid rgba(56, 189, 248, .5); }
+.alarm { display: flex; flex-direction: column; gap: 18px; height: 100%; }
+.alarm-head { display: flex; gap: 22px; align-items: center; background: #b91c1c; border-radius: 22px; padding: 18px 26px;
+  animation: alarm-pulse .7s ease-in-out infinite alternate; box-shadow: 0 0 40px rgba(239, 68, 68, .45); }
+.alarm-ic { font-size: 64px; line-height: 1; }
+.alarm-head h2 { margin: 0; font-size: 38px; }
+.alarm-head p { margin: 6px 0 0; font-size: 21px; color: #fee2e2; }
+.alarm-body { flex: 1; display: flex; gap: 24px; align-items: center; justify-content: center; min-height: 0; }
+.alarm-body .crops { flex-direction: column; max-height: 420px; }
+.alarm-body .crops figure { width: 200px; }
+.alarm-body .crops img { height: 150px; }
+.scanview.big .scan-img { width: 560px; }
+.scanview.big .bx rect { stroke-width: 7; }
+.scanview.big .bx text { font-size: 40px; stroke-width: 8px; }
+.alarm .result-actions { justify-content: flex-end; }
+@keyframes alarm-pulse { from { background: #991b1b; } to { background: #dc2626; } }
+.sorting-note { font-size: 19px !important; color: var(--muted); margin-top: 16px !important; }
+
+/* ================= Đăng nhập bằng số điện thoại ================= */
+.bar-station { font-size: 15px; font-weight: 600; color: var(--muted); margin-left: 6px; }
+.eco { font-size: 19px; color: var(--muted); margin: 22px 0 0; line-height: 1.5; }
+.eco b { color: var(--text); }
+.spacer { width: 150px; }
+.phone { display: flex; flex-direction: column; align-items: center; }
+.phone .row-head { width: 100%; }
+.phone-box { width: 560px; height: 92px; border-radius: 18px; background: rgba(255, 255, 255, .08); border: 2px solid var(--green);
+  display: grid; place-items: center; font-size: 50px; font-weight: 800; letter-spacing: 3px; }
+.phone-box i { color: var(--muted); font-style: normal; font-weight: 500; letter-spacing: 6px; }
+.phone-box.err { border-color: var(--red); }
+.phone-box.small { width: 100%; height: 72px; font-size: 36px; letter-spacing: 2px; }
+.phone-box.small i { font-size: 24px; letter-spacing: 0; }
+.phone-note { font-size: 19px; color: var(--muted); margin: 12px 0 0; text-align: center; }
+.err-text { color: #fca5a5; font-weight: 600; }
+.phone .pad { margin-top: 14px; width: 480px; }
+.phone .pad .key { height: 68px; }
+.pad-ok { margin-top: 14px; width: 480px; }
+.confirm { text-align: center; padding-top: 50px; }
+.avatar.big { width: 120px; height: 120px; font-size: 60px; margin: 0 auto; }
+.confirm h2 { font-size: 46px; margin: 20px 0 6px; }
+.confirm h2 span { color: #86efac; }
+.confirm .muted { font-size: 26px; letter-spacing: 2px; margin: 0 0 20px; }
+.confirm .banner { max-width: 760px; margin: 0 auto 10px; }
+.confirm-btns { display: flex; justify-content: center; gap: 24px; margin-top: 30px; }
+.newuser .field { cursor: default; }
+
+/* ================= 3 nút nhận tiền ================= */
+.po-btns.three { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.po-btns.three .po-btn { flex-direction: column; text-align: center; padding: 22px 16px; gap: 12px; }
+.po-btns.three .po-btn b { font-size: 30px; }
+.po-btns.three .po-btn small { font-size: 17px; }
+.po-btns.four { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.po-btns.four .po-btn { flex-direction: column; text-align: center; padding: 20px 10px; gap: 10px; }
+.po-btns.four .po-btn b { font-size: 25px; }
+.po-btns.four .po-btn small { font-size: 15px; }
+.payout.compact .po-btns.four .po-btn { flex-direction: row; text-align: left; padding: 10px 12px; gap: 8px; }
+.payout.compact .po-btns.four .po-btn b { font-size: 19px; }
+.payout.compact .po-btns.four .po-btn small { display: none; }
+.session .payout.compact .po-btns.four { grid-template-columns: 1fr 1fr; }
+.po-btn.save { background: linear-gradient(135deg, #0ea5e9, #0369a1); box-shadow: 0 10px 30px rgba(14, 165, 233, .35); }
+.po-done.save .res-icon { background: #0284c7; }
+.po-done.save .amount { color: #7dd3fc; }
+.po-btn.voucher { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 10px 30px rgba(245, 158, 11, .35); }
+.po-btn.transfer { background: linear-gradient(135deg, #0ea5e9, #0369a1); box-shadow: 0 10px 30px rgba(14, 165, 233, .35); }
+.payout.compact .po-btns.three .po-btn { flex-direction: row; text-align: left; padding: 10px 14px; gap: 10px; }
+.payout.compact .po-btns.three .po-btn b { font-size: 21px; }
+.payout.compact .po-btns.three .po-btn small { display: none; }
+.session.with-balance .session-body { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+.session.with-balance .checklist li { font-size: 20px; }
+.session .payout.compact { margin: 0; border: 1px solid rgba(34, 197, 94, .5); border-radius: 18px; padding: 12px 16px; background: rgba(34, 197, 94, .08); text-align: center; }
+.session .payout.compact .po-btns.three { grid-template-columns: 1fr; }
+
+/* ================= Chuyển vào STK ================= */
+.transfer .row-head h2 .amt { color: #86efac; }
+.tf-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 30px; }
+.lbl { display: block; font-size: 18px; color: var(--muted); margin-bottom: 10px; }
+.banks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.bank { height: 64px; border-radius: 14px; border: 2px solid var(--card-b); background: var(--card); color: var(--text); font: 700 20px var(--font); cursor: pointer; }
+.bank.on { border-color: var(--green); background: rgba(34, 197, 94, .22); }
+.tf-note { font-size: 16px; color: var(--muted); margin: 8px 0 0; }
+.transfer .pad { width: 100%; margin-top: 10px; gap: 8px; }
+.transfer .pad .key { height: 58px; font-size: 28px; }
+.transfer .pad-ok { width: 100%; margin-top: 10px; padding: 14px; }
+.transfer .po-auto { text-align: center; font-size: 16px; }
+
+/* ================= Voucher QR ================= */
+.voucher { display: flex; gap: 34px; align-items: center; justify-content: center; text-align: left; }
+.voucher .qr { width: 330px; height: 330px; background: #fff; border-radius: 22px; padding: 14px; flex: none; box-shadow: 0 16px 40px rgba(0, 0, 0, .35); }
+.voucher .qr svg { width: 100%; height: 100%; display: block; }
+.v-info small { font-size: 20px; color: #fcd34d; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.v-info .amount { color: #fde68a; }
+.v-code { font: 800 38px ui-monospace, Consolas, monospace; letter-spacing: 3px; background: rgba(255, 255, 255, .1); border: 2px dashed #fcd34d;
+  border-radius: 14px; padding: 6px 16px; display: inline-block; margin: 6px 0 10px; }
+.v-info p { font-size: 20px; margin: 8px 0; max-width: 520px; }
+.voucher.compact { gap: 16px; border: 1px solid rgba(245, 158, 11, .5); border-radius: 18px; padding: 12px; background: rgba(245, 158, 11, .08); }
+.voucher.compact .qr { width: 190px; height: 190px; padding: 8px; }
+.voucher.compact .amount { font-size: 44px; }
+.voucher.compact .v-code { font-size: 24px; }
+.voucher.compact .v-info p { font-size: 15px; }
+
+/* camera giám sát */
+.bar-rec { margin-left: 10px; font-size: 12px; font-weight: 800; color: #ef4444; letter-spacing: .5px; animation: rec 1.6s steps(2) infinite; }
+.bar-rec.blocked { color: #fff; background: #ef4444; border-radius: 6px; padding: 1px 6px; animation: none; }
+@keyframes rec { 50% { opacity: .35; } }
+.notice.security { background: #7f1d1d; color: #fff; font-size: 1.15em; border: 2px solid #fca5a5; }
+/* in phiếu voucher */
+.btn-print { margin-top: 10px; font-size: 24px; padding: 14px 26px; }
+.print-note { color: #fde68a; font-weight: 700; font-size: 20px; margin-top: 8px !important; animation: rec 1.2s steps(2) infinite; }
+.voucher.compact .btn-print { font-size: 18px; padding: 8px 16px; }

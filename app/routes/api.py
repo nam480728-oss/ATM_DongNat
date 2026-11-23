@@ -4,30 +4,18 @@ from flask import Blueprint, current_app, jsonify, request
 from PIL import Image, UnidentifiedImageError
 
 from app.detection import Frame
-from app.services import user_service
 from app.station.hal import decode_data_url
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
 
-@bp.get("/users")
-def list_users():
-    return jsonify(user_service.search_users(request.args.get("q")))
-
-
-@bp.post("/users")
-def create_user():
-    data = request.get_json(silent=True) or {}
-    try:
-        user = user_service.create_user(data.get("name", ""), str(data.get("account_number", "")))
-    except user_service.UserError as e:
-        return jsonify({"error": str(e)}), 400
-    return jsonify(user_service.user_to_dict(user)), 201
-
-
 @bp.get("/state")
 def state():
-    return jsonify(current_app.extensions["station"].snapshot())
+    from app import get_controller
+    c = get_controller(current_app._get_current_object(), request.args.get("station"))
+    if c is None:
+        return jsonify({"error": "Không có trạm này"}), 404
+    return jsonify(c.snapshot())
 
 
 @bp.post("/scan")

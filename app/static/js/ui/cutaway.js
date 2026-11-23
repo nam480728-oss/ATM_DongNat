@@ -1,4 +1,4 @@
-// Chế độ cắt lớp: vỏ trạm trong suốt dần để xem cơ cấu bên trong
+// Chế độ cắt vách: vỏ trạm trong suốt dần để xem cơ cấu bên trong (khay, phễu, băng chuyền, thùng)
 const gsap = () => window.gsap;
 
 export function setupCutaway(ctx) {
@@ -10,7 +10,7 @@ export function setupCutaway(ctx) {
     targets.push(o);
   });
   collect(ctx.station.shell);
-  ['feedCavityLiner', 'returnCavity', 'sign', 'infoPanel', 'rearDoor', 'slotFront', 'slotLabel'].forEach((n) => {
+  ['rearDoor', 'slotFront', 'slotLabel'].forEach((n) => {
     const o = ctx.station.root.getObjectByName(n);
     if (o) collect(o);
   });
@@ -21,8 +21,10 @@ export function setupCutaway(ctx) {
   function apply() {
     const v = state.value;
     for (const m of mats()) {
-      m.transparent = v < 0.999;
-      m.opacity = v;
+      // vật liệu vốn trong suốt (decal, kính) giữ nguyên độ trong suốt gốc
+      m.userData.base ??= { transparent: m.transparent, opacity: m.opacity };
+      m.transparent = m.userData.base.transparent || v < 0.999;
+      m.opacity = m.userData.base.opacity * v;
       m.depthWrite = v > 0.5;
       m.needsUpdate = true;
     }
@@ -31,6 +33,7 @@ export function setupCutaway(ctx) {
 
   ctx.cutaway = {
     get on() { return state.on; },
+    get value() { return state.value; },     // 1 = vỏ đục, < 1 = đang / đã trong suốt
     set(on) {
       if (on === state.on) return;
       state.on = on;
@@ -41,10 +44,14 @@ export function setupCutaway(ctx) {
     /** Chạy fn khi vỏ trạm tạm thời đục hoàn toàn (camera buồng quét chụp như máy thật, không bị chế độ cắt lớp
      *  làm lọt sáng / đổi bóng -> ảnh nền và ảnh quét luôn giống nhau). */
     withOpaque(fn) {
-      const v = state.value;
-      if (v >= 0.999) return fn();
-      state.value = 1; apply();
-      try { return fn(); } finally { state.value = v; apply(); }
+      const run = () => {
+        const v = state.value;
+        if (v >= 0.999) return fn();
+        state.value = 1; apply();
+        try { return fn(); } finally { state.value = v; apply(); }
+      };
+      // cơ cấu bị ẩn để tiết kiệm (interiorCull) phải hiện lại khi camera chụp
+      return ctx.interiorCull ? ctx.interiorCull.withAll(run) : run();
     },
   };
   return ctx.cutaway;
@@ -54,7 +61,7 @@ export function mountCutawayButton(container, ctx) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'view-btn cut-btn';
-  b.textContent = 'Cắt lớp';
+  b.textContent = 'Cắt vách';
   b.setAttribute('aria-pressed', 'false');
   b.addEventListener('click', () => ctx.cutaway.toggle());
   (ctx.cutawayListeners ||= []).push((on) => {

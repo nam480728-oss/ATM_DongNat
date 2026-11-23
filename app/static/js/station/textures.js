@@ -94,9 +94,9 @@ export function signTexture() {
   drawRecycle(g, 230, 200, 300, '#ffffff');
   g.fillStyle = '#ffffff';
   g.font = `800 190px ${FONT}`; g.textBaseline = 'middle';
-  g.fillText('ATM ĐỒNG NÁT', 420, 175);
+  g.fillText('PEACE', 420, 175);
   g.font = `500 64px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.9)';
-  g.fillText('Đổi nhựa & kim loại lấy tiền', 430, 320);
+  g.fillText('WELCOME', 430, 320);
   return toTexture(c);
 }
 
@@ -124,21 +124,36 @@ export function infoTexture(prices = { bottle: 200, can: 300 }) {
   g.fillStyle = '#334155'; g.font = `500 32px ${FONT}`;
   g.fillText('Hộp giấy, túi nilon, thủy tinh, hộp xốp…', 512, 662);
   g.fillStyle = '#64748b'; g.font = `400 28px ${FONT}`;
-  g.fillText('Có vật lạ trong khay → trả lại toàn bộ rác', 512, 718);
+  g.fillText('Rác khác → bỏ vào thùng rác 2 bên trạm', 512, 718);
   return toTexture(c);
 }
 
-/** Nhãn cạnh lỗ bỏ chai */
+/** Nhãn cạnh lỗ từ thiện */
 export function slotLabelTexture() {
   const [c, g] = canvas(640, 320);
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, 640, 320);
-  g.fillStyle = '#16a34a'; roundRect(g, 0, 0, 640, 320, 36); g.fill();
+  g.fillStyle = '#db2777'; roundRect(g, 0, 0, 640, 320, 36); g.fill();
   g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.font = `800 74px ${FONT}`; g.fillText('BỎ TỪNG', 320, 78);
-  g.fillText('MÓN', 320, 160);
-  g.font = `500 40px ${FONT}`; g.fillStyle = '#dcfce7';
-  g.fillText('◀ nằm ngang, không cần', 320, 236);
-  g.fillText('mở cửa', 320, 284);
+  g.font = `800 70px ${FONT}`; g.fillText('♥ TỪ THIỆN', 320, 82);
+  g.font = `600 44px ${FONT}`; g.fillText('Bỏ chai / lon', 320, 168);
+  g.font = `500 36px ${FONT}`; g.fillStyle = '#fce7f3';
+  g.fillText('không cần đăng nhập', 320, 232);
+  g.fillText('không tính tiền', 320, 278);
+  return toTexture(c);
+}
+
+/** Nhãn thùng rác công cộng 2 bên trạm */
+export function publicBinTexture() {
+  const [c, g] = canvas(512, 640);
+  g.fillStyle = '#334155'; g.fillRect(0, 0, 512, 640);
+  g.fillStyle = '#f8fafc'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `800 76px ${FONT}`; g.fillText('RÁC', 256, 150);
+  g.fillText('THƯỜNG', 256, 240);
+  g.font = `500 34px ${FONT}`; g.fillStyle = '#cbd5e1';
+  g.fillText('túi nilon, hộp xốp,', 256, 360);
+  g.fillText('giấy, thức ăn thừa…', 256, 406);
+  g.fillStyle = '#facc15'; g.font = `600 32px ${FONT}`;
+  g.fillText('Chai / lon → bỏ vào trạm', 256, 520);
   return toTexture(c);
 }
 

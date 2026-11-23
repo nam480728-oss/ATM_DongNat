@@ -13,35 +13,17 @@ def test_pricing():
     assert format_vnd(0) == "0đ"
 
 
-def test_create_and_list_users_duplicate_names(ctx):
-    c = ctx["client"]
-    assert c.post("/api/users", json={"name": "  Nguyễn  Nam ", "account_number": "0011223344"}).status_code == 201
-    assert c.post("/api/users", json={"name": "Đặng Lan", "account_number": "998877665"}).status_code == 201
-    names = {u["display_name"] for u in c.get("/api/users").get_json()}
-    assert names == {"Nguyễn Nam", "Đặng Lan"}
-
-    assert c.post("/api/users", json={"name": "nguyễn nam", "account_number": "5555661234"}).status_code == 201
-    names = {u["display_name"] for u in c.get("/api/users").get_json()}
-    assert names == {"Nguyễn Nam (*3344)", "nguyễn nam (*1234)", "Đặng Lan"}
-    # Tìm theo tên không dấu hoa thường
-    assert len(c.get("/api/users?q=NAM").get_json()) == 2
+def test_phone_normalize_and_mask():
+    from app.services import user_service as us
+    assert us.normalize_phone("+84 912.345.678") == "0912345678"
+    assert us.valid_phone("0912345678") and not us.valid_phone("0112345678") and not us.valid_phone("091234567")
+    assert us.mask_name("  Nguyễn   Văn An ") == "Nguyễn V** A*"
+    assert us.mask_name("Lan") == "L**"
+    assert us.mask_phone("0912345678") == "091****678"
 
 
-def test_create_user_validation(ctx):
-    c = ctx["client"]
-    assert c.post("/api/users", json={"name": "", "account_number": "123456"}).status_code == 400
-    r = c.post("/api/users", json={"name": "A", "account_number": "12ab56"})
-    assert r.status_code == 400 and "6–19" in r.get_json()["error"]
-    c.post("/api/users", json={"name": "A", "account_number": "123456"})
-    r = c.post("/api/users", json={"name": "B", "account_number": "123456"})
-    assert r.status_code == 400 and "đã được đăng ký" in r.get_json()["error"]
-
-
-def test_users_api_masks_account(ctx):
-    c = ctx["client"]
-    c.post("/api/users", json={"name": "A", "account_number": "0123456789"})
-    u = c.get("/api/users").get_json()[0]
-    assert "account_number" not in u and u["masked_account"] == "******6789"
+def test_old_user_api_removed(ctx):
+    assert ctx["client"].get("/api/users").status_code == 404     # không còn danh sách tên công khai
 
 
 def test_scan_endpoint_with_hints(ctx):

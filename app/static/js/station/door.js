@@ -27,6 +27,7 @@ export function buildDoor() {
   // Kính mờ
   const glass = box(W - 2 * F + 0.004, H - 2 * F + 0.004, 0.006, M.glass, { x: W / 2 });
   glass.name = 'doorGlass';
+  glass.userData.phys = 'kin';             // rác trên khay không văng ra khi cửa đóng
   leaf.add(glass);
 
   // Tay nắm dọc cạnh phải

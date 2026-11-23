@@ -34,8 +34,6 @@ class Config:
     YOLO_IMGSZ = int(os.getenv("YOLO_IMGSZ", "1280"))
     # So nền khay (bắt vật model không khoanh được) – chỉ chạy với detector nhìn ảnh thật (yolo)
     BG_CHECK = os.getenv("BG_CHECK", "1") == "1"
-    # Hiện ảnh nhận diện + chờ người dùng bấm OK rồi mới nghiêng khay (đổ vào thùng / trả lại)
-    REQUIRE_CONFIRM = os.getenv("REQUIRE_CONFIRM", "1") == "1"
     # Ánh xạ tên lớp (model trả về) -> nhóm 'bottle' | 'can'. Lớp không có ở đây = 'other'.
     # Khi cắm model thật, sửa danh sách này theo tên lớp của model.
     CLASS_MAP = {
@@ -77,11 +75,33 @@ class Config:
     }
 
     # ---- Trạm ----
-    STATION_ID = 1
+    STATION_ID = 1                 # trạm mặc định khi link không có ?station=
+    # Ngân hàng hiện trong ô chọn khi người dùng chọn "Chuyển vào STK"
+    BANKS = ["Vietcombank", "VietinBank", "BIDV", "Agribank", "Techcombank", "MB Bank", "ACB", "VPBank",
+             "Sacombank", "TPBank", "VIB", "HDBank", "SHB", "OCB", "SeABank", "MoMo", "ZaloPay"]
+    # Địa chỉ gắn vào mã QR voucher (điện thoại của người bán phải mở được). Trống = lấy theo địa chỉ trình duyệt
+    # màn hình trạm đang dùng (vd http://192.168.1.10:5000)
+    PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "")
     # Thời gian tối đa chờ một cơ cấu chấp hành (hoạt ảnh 3D / phần cứng) phản hồi
     ACTUATOR_TIMEOUT_SEC = 30
-    VIBRATE_SECONDS = 3
+    VIBRATE_SECONDS = 2.0          # rung khay cho rác tản ra (nhiều vật / chồng nhau)
+    ALARM_SECONDS = 5              # loa cảnh báo kêu bao lâu khi có rác lạ (đèn đỏ sáng tới khi quét lại)
+    SORT_MAX_ROUNDS = 4            # số vòng quét lại khay (vật bị che lộ ra sau khi lấy vật khác)
     LOGOUT_WARNING_SEC = 15  # hiện đếm ngược khi còn 15 giây
+    # Miệng phễu trong ảnh camera khay (chuẩn hóa 0..1): giữa mép trái
+    FUNNEL_IMG = (0.0, 0.5)
+    # Băng chuyền (mét, tính theo trục X của trạm; PHẢI trùng app/static/js/station/dims.js -> BELT)
+    BELT_SPEED = 0.30                              # m/s
+    BELT_CAMERA_X = -0.30                          # camera băng chuyền
+    BELT_PUSHERS = {"bottle": 0.0, "can": 0.32}    # thanh gạt chai trước, lon sau
+    BELT_END_X = 0.62                              # tấm gạt chéo cuối băng -> thùng 'khác'
+    TRAY_MAX_ITEMS = 15                            # tối đa vật mỗi mẻ trên khay
+    # Phễu: camera băng chuyền canh vật mới rơi xuống; quá FUNNEL_WAIT_SEC chưa thấy = kẹt -> mở dần cổ phễu
+    FUNNEL_WAIT_SEC = 10
+    FUNNEL_OPEN_STEPS = 4                          # số nấc mở (mỗi nấc chờ FUNNEL_STEP_SEC)
+    FUNNEL_STEP_SEC = 1.5
+    FUNNEL_SHAKES = 2                              # mở hết cỡ vẫn kẹt -> rung phễu bấy nhiêu lần rồi báo kẹt
+    FUNNEL_JAM_RECHECK_SEC = 10                    # đang báo kẹt: tự kiểm tra lại camera mỗi bấy nhiêu giây
 
     # Giá trị mặc định nếu bảng settings thiếu khóa
     DEFAULT_SETTINGS = {
@@ -89,9 +109,17 @@ class Config:
         "price_can": "300",
         "idle_timeout_sec": "120",
         "max_vibrate_retries": "2",
-        "payout_timeout_sec": "30",
+        "payout_timeout_sec": "60",      # hết giờ không chọn -> giữ tiền vào số dư
+        "voucher_days": "30",
+        "public_capacity": "30",          # thùng mini gắn 2 bên hông trạm
+        "security_reject_session": "3",   # camera giám sát: bỏ rác lạ bấy nhiêu lần / phiên -> báo admin
+        "security_reject_day": "5",       # ... hoặc bấy nhiêu lần / 24 giờ cùng số điện thoại
+        "security_cooldown_sec": "30",    # cùng loại sự cố ở 1 trạm chỉ báo lại sau bấy nhiêu giây
     }
-    # Lỗ bỏ từng chai/lon: đường kính lỗ 11 cm (vật to hơn không lọt – kiểm tra ở cơ khí)
+    # Camera giám sát: cạy khay / cửa bấy nhiêu lần trong SECURITY_TAMPER_WINDOW giây -> sự cố
+    SECURITY_TAMPER_COUNT = 3
+    SECURITY_TAMPER_WINDOW = 15
+    # Lỗ từ thiện: đường kính lỗ 11 cm (vật to hơn không lọt – kiểm tra ở cơ khí)
     SLOT_DIAMETER_MM = 110
 
     # Bật các công cụ thử nghiệm của bản mô phỏng (panel Dev). Máy thật: SIM_DEV_TOOLS=0
@@ -108,5 +136,7 @@ class TestConfig(Config):
     CHECK_TABLES_ON_START = False
     ACTUATOR_TIMEOUT_SEC = 2
     VIBRATE_SECONDS = 0
+    FUNNEL_WAIT_SEC = 0
+    FUNNEL_STEP_SEC = 0
+    FUNNEL_JAM_RECHECK_SEC = 0
     BG_CHECK = False
-    REQUIRE_CONFIRM = False

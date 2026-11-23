@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ATM Đồng Nát – Mô phỏng 3D</title>
+  <title>{{ station.name }} – Mô phỏng 3D</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -20,6 +20,11 @@
   <script src="{{ url_for('static', filename='vendor/socket.io.min.js') }}"></script>
 </head>
 <body>
+  <script>
+    window.STATION_ID = {{ station.id }};
+    window.STREET = {{ street | tojson }};          // 3 trạm thẳng hàng trên vỉa hè (trái -> phải)
+    window.DEMO_SHOP = {{ demo_shop | tojson }};     // cửa hàng demo đối diện (quầy thu ngân nhận voucher)
+  </script>
   <div id="scene"></div>
   <div id="css3d"></div>
 
@@ -27,10 +32,16 @@
     <div class="brand">
       <span class="logo">♻</span>
       <div>
-        <h1>ATM Đồng Nát</h1>
+        <h1>PEACE</h1>
         <p>Mô phỏng trạm đổi nhựa &amp; kim loại</p>
       </div>
     </div>
+    <label class="station-pick" title="Mỗi trạm là một máy riêng, dùng chung tài khoản (số điện thoại)">
+      <span>Trạm</span>
+      <select id="station-select" aria-label="Chọn trạm">
+        {% for s in stations %}<option value="{{ s.id }}" {% if s.id == station.id %}selected{% endif %}>{{ s.code or s.id }} · {{ s.name }}</option>{% endfor %}
+      </select>
+    </label>
     <div class="hint">Kéo chuột để xoay · Cuộn để zoom · Chuột phải để dịch</div>
   </header>
 
@@ -40,6 +51,14 @@
 
   <div id="loading" class="loading">Đang dựng mô hình 3D…</div>
 
+  <script>
+    // Trạm trên khung phố: camera bay sang (không tải lại trang); trạm khác: mở trang của trạm đó
+    document.getElementById('station-select').addEventListener('change', async (e) => {
+      const id = Number(e.target.value), st = window.ATM && window.ATM.stations;
+      if (st && st.has(id)) { if (!(await st.selectById(id))) e.target.value = String(window.STATION_ID); }
+      else location.search = '?station=' + id;
+    });
+  </script>
   <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
